@@ -10,6 +10,9 @@ app.use(express.json());
 
 const PORT = process.env.PORT || 3000;
 
+let cachedAccessToken = null;
+let tokenExpiryTime = null;
+
 // Test route
 app.get("/", (req, res) => {
   res.send("Server is running 🚀");
@@ -89,6 +92,18 @@ function normalizePhone(phone) {
 
 async function getAccessToken() {
   try {
+    // ✅ token still valid
+    if (
+      cachedAccessToken &&
+      tokenExpiryTime &&
+      Date.now() < tokenExpiryTime
+    ) {
+      console.log("Using cached access token");
+      return cachedAccessToken;
+    }
+
+    console.log("Generating new access token");
+
     const response = await fetch("https://api.hubapi.com/oauth/v1/token", {
       method: "POST",
       headers: {
@@ -104,18 +119,29 @@ async function getAccessToken() {
 
     const data = await response.json();
 
-    console.log("New Access Token:", data.access_token);
+    cachedAccessToken = data.access_token;
 
-    return data.access_token;
+    // ✅ expire before actual expiry for safety
+    tokenExpiryTime = Date.now() + (data.expires_in - 60) * 1000;
+
+    console.log("New access token generated");
+
+    return cachedAccessToken;
   } catch (error) {
     console.error("Token Refresh Error:", error.message);
     throw error;
   }
 }
 
+
+
 // MAIN API
 app.post("/validate-phone", async (req, res) => {
+  console.log("===== REQUEST START =====");
+
   try {
+    console.log("Fetching contact from HubSpot...");
+
     console.log("BODY:", req.body);
 
     // ✅ Now using phone_number everywhere
@@ -132,6 +158,8 @@ app.post("/validate-phone", async (req, res) => {
 
     console.log("Contact ID:", contactId);
 
+    console.log("Fetching contact from HubSpot...");
+
     // 🔥 HubSpot से phone fetch करो
     const accessToken = await getAccessToken();
 
@@ -145,6 +173,8 @@ app.post("/validate-phone", async (req, res) => {
         },
       },
     );
+
+    console.log("Veracity completed");
 
     const contactData = await contactRes.json();
 
@@ -162,6 +192,8 @@ app.post("/validate-phone", async (req, res) => {
     }
 
     const normalizedPhone = normalizePhone(phone_number);
+
+    console.log("Calling Veracity API...");
 
     // 🔥 Veracity API call
     const response = await fetch(
@@ -196,9 +228,13 @@ app.post("/validate-phone", async (req, res) => {
 
     console.log("Veracity Response:", data);
 
+    console.log("Veracity completed");
+
     // 🔥 HubSpot update start
 
     // const accessToken = await getAccessToken();
+
+    console.log("Updating HubSpot properties...");
 
     const hubspotResponse = await fetch(
       `https://api.hubapi.com/crm/v3/objects/contacts/${contactId}`,
@@ -226,9 +262,13 @@ app.post("/validate-phone", async (req, res) => {
       console.log("HubSpot RAW:", text);
 
       hubspotData = text ? JSON.parse(text) : {};
+
+      console.log("HubSpot update completed");
     } catch (err) {
       console.error("HubSpot parse error:", err);
     }
+
+    console.log("===== REQUEST END =====");
 
     // ✅ Clean response
     return res.json({
