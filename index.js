@@ -3,6 +3,21 @@ const fetch = require("node-fetch");
 const cors = require("cors");
 require("dotenv").config();
 
+const requiredEnvVars = [
+  "VERACITY_API_KEY",
+  "HUBSPOT_CLIENT_ID",
+  "HUBSPOT_CLIENT_SECRET",
+  "HUBSPOT_REFRESH_TOKEN",
+  "HUBSPOT_REDIRECT_URI",
+];
+
+requiredEnvVars.forEach((key) => {
+  if (!process.env[key]) {
+    console.error(`Missing environment variable: ${key}`);
+    process.exit(1);
+  }
+});
+
 const app = express();
 
 app.use(cors());
@@ -93,11 +108,7 @@ function normalizePhone(phone) {
 async function getAccessToken() {
   try {
     // ✅ token still valid
-    if (
-      cachedAccessToken &&
-      tokenExpiryTime &&
-      Date.now() < tokenExpiryTime
-    ) {
+    if (cachedAccessToken && tokenExpiryTime && Date.now() < tokenExpiryTime) {
       console.log("Using cached access token");
       return cachedAccessToken;
     }
@@ -132,8 +143,6 @@ async function getAccessToken() {
     throw error;
   }
 }
-
-
 
 // MAIN API
 app.post("/validate-phone", async (req, res) => {
@@ -173,8 +182,6 @@ app.post("/validate-phone", async (req, res) => {
         },
       },
     );
-
-    console.log("Veracity completed");
 
     const contactData = await contactRes.json();
 
@@ -230,6 +237,13 @@ app.post("/validate-phone", async (req, res) => {
 
     console.log("Veracity completed");
 
+    if (!data?.success) {
+      return res.status(400).json({
+        success: false,
+        message: data?.message || "Phone validation failed",
+      });
+    }
+
     // 🔥 HubSpot update start
 
     // const accessToken = await getAccessToken();
@@ -254,6 +268,17 @@ app.post("/validate-phone", async (req, res) => {
         }),
       },
     );
+
+    if (!hubspotResponse.ok) {
+      const errorText = await hubspotResponse.text();
+
+      console.error("HubSpot update failed:", errorText);
+
+      return res.status(500).json({
+        success: false,
+        message: "Failed to update HubSpot properties",
+      });
+    }
 
     let hubspotData = {};
 
