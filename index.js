@@ -347,7 +347,8 @@ app.post("/bulk-validate", async (req, res) => {
     console.log("Fetching list members from HubSpot...");
 
     const listResponse = await fetch(
-      `https://api.hubapi.com/crm/v3/lists/${listId}/memberships/join-order`,
+      // `https://api.hubapi.com/crm/v3/lists/${listId}/memberships/join-order`,
+      `https://api.hubapi.com/contacts/v1/lists/${listId}/contacts/all`,
       {
         method: "GET",
         headers: {
@@ -373,9 +374,12 @@ app.post("/bulk-validate", async (req, res) => {
 
     batchJob.status = "running";
 
-    for (const member of listData.results) {
+    // for (const member of listData.results) {
+    for (const member of listData.contacts) {
       try {
-        const contactId = member.recordId;
+        // const contactId = member.recordId;
+
+        const contactId = member.vid;
 
         console.log("Processing Contact:", contactId);
 
@@ -476,15 +480,7 @@ app.get("/hubspot-lists", async (req, res) => {
 
     const accessToken = await getAccessToken();
 
-    // const response = await fetch("https://api.hubapi.com/contacts/v1/lists", {
-    //   method: "GET",
-    //   headers: {
-    //     Authorization: `Bearer ${accessToken}`,
-    //     "Content-Type": "application/json",
-    //   },
-    // });
-
-    const response = await fetch("https://api.hubapi.com/crm/v3/lists", {
+    const response = await fetch("https://api.hubapi.com/contacts/v1/lists", {
       method: "GET",
       headers: {
         Authorization: `Bearer ${accessToken}`,
