@@ -269,10 +269,7 @@ app.post("/validate-phone", async (req, res) => {
     console.log("Fetched Phone:", phone_number);
 
     if (!phone_number) {
-      return res.status(400).json({
-        success: false,
-        message: "Phone not found in HubSpot",
-      });
+      return sendError(res, 400, "Phone not found in HubSpot");
     }
 
     console.log("Calling Veracity API...");
@@ -285,37 +282,20 @@ app.post("/validate-phone", async (req, res) => {
     console.log("Veracity completed");
 
     if (!data?.success) {
-      return res.status(400).json({
-        success: false,
-        message: data?.message || "Phone validation failed",
-      });
+      return sendError(res, 400, data?.message || "Phone validation failed");
     }
 
     // 🔥 HubSpot update start
 
     console.log("Updating HubSpot properties...");
 
-    async function updateHubSpotContact(accessToken, contactId, properties) {
-      const response = await fetch(
-        `https://api.hubapi.com/crm/v3/objects/contacts/${contactId}`,
-        {
-          method: "PATCH",
-          headers: {
-            Authorization: `Bearer ${accessToken}`,
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({
-            properties,
-          }),
-        },
-      );
+    await updateHubSpotContact(accessToken, contactId, {
+      veracity_validation_status: data.success ? "valid" : "invalid",
 
-      if (!response.ok) {
-        throw new Error(`HubSpot update failed for contact ${contactId}`);
-      }
+      veracity_carrier: data.data?.carrier_name || "",
 
-      return response;
-    }
+      veracity_validated_at: new Date().toISOString(),
+    });
 
     console.log("===== REQUEST END =====");
 
@@ -331,10 +311,7 @@ app.post("/validate-phone", async (req, res) => {
   } catch (error) {
     console.error("Error:", error.message);
 
-    return res.status(500).json({
-      success: false,
-      message: "Something went wrong",
-    });
+    return sendError(res, 500, "Something went wrong");
   }
 });
 
@@ -344,10 +321,7 @@ app.post("/bulk-validate", async (req, res) => {
     const { listId } = req.body;
 
     if (!listId) {
-      return res.status(400).json({
-        success: false,
-        message: "listId is required",
-      });
+      return sendError(res, 400, "listId is required");
     }
 
     console.log("Bulk validation started for list:", listId);
@@ -386,10 +360,7 @@ app.post("/bulk-validate", async (req, res) => {
 
       console.error("Failed to fetch list members:", errorText);
 
-      return res.status(500).json({
-        success: false,
-        message: "Failed to fetch HubSpot list members",
-      });
+      return sendError(res, 500, "Failed to fetch HubSpot list members");
     }
 
     const listData = await listResponse.json();
@@ -493,10 +464,50 @@ app.post("/bulk-validate", async (req, res) => {
   } catch (error) {
     console.error("Bulk validation error:", error.message);
 
-    return res.status(500).json({
-      success: false,
-      message: "Bulk validation failed",
+    return sendError(res, 500, "Bulk validation failed");
+  }
+});
+
+app.get("/hubspot-lists", async (req, res) => {
+  try {
+    console.log("Fetching HubSpot lists...");
+
+    const accessToken = await getAccessToken();
+
+    const response = await fetch("https://api.hubapi.com/contacts/v1/lists", {
+      method: "GET",
+      headers: {
+        Authorization: `Bearer ${accessToken}`,
+        "Content-Type": "application/json",
+      },
     });
+
+    if (!response.ok) {
+      const errorText = await response.text();
+
+      console.error("Failed to fetch lists:", errorText);
+
+      return sendError(res, 500, "Failed to fetch HubSpot lists");
+    }
+
+    const data = await response.json();
+
+    console.log("LIST RESPONSE:", data);
+
+    const formattedLists = (data.lists || []).map((list) => ({
+      label: `${list.name} (${list.metaData?.size || 0})`,
+      value: String(list.listId),
+    }));
+
+    console.log("FORMATTED LISTS:", formattedLists);
+
+    return sendSuccess(res, "Lists fetched successfully", {
+      lists: formattedLists,
+    });
+  } catch (error) {
+    console.error("List fetch error:", error.message);
+
+    return sendError(res, 500, "Unable to fetch lists");
   }
 });
 
