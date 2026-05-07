@@ -296,7 +296,7 @@ app.post("/validate-phone", async (req, res) => {
 
       veracity_validated_at: new Date().toISOString(),
 
-      ulk_validation_status: "completed",
+      bulk_validation_status: "completed",
 
       bulk_validation_summary: data.success
         ? "Phone validated successfully"
