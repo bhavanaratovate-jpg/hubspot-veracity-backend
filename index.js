@@ -33,49 +33,65 @@ app.get("/", (req, res) => {
   res.send("Server is running 🚀");
 });
 
-app.get("/oauth/callback", async (req, res) => {
-  try {
-    const code = req.query.code;
+// app.get("/oauth/callback", async (req, res) => {
+//   try {
+//     const code = req.query.code;
 
-    if (!code) {
-      return res.send("No code received");
-    }
+//     if (!code) {
+//       return res.send("No code received");
+//     }
 
-    console.log("Auth Code:", code);
+//     console.log("Auth Code:", code);
 
-    // 🔥 TOKEN EXCHANGE
-    const tokenResponse = await fetch("https://api.hubapi.com/oauth/v1/token", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/x-www-form-urlencoded",
-      },
-      body: new URLSearchParams({
-        grant_type: "authorization_code",
-        client_id: process.env.HUBSPOT_CLIENT_ID,
-        client_secret: process.env.HUBSPOT_CLIENT_SECRET,
-        redirect_uri: process.env.HUBSPOT_REDIRECT_URI,
-        code: code,
-      }),
-    });
+//     // 🔥 TOKEN EXCHANGE
+//     const tokenResponse = await fetch("https://api.hubapi.com/oauth/v1/token", {
+//       method: "POST",
+//       headers: {
+//         "Content-Type": "application/x-www-form-urlencoded",
+//       },
+//       body: new URLSearchParams({
+//         grant_type: "authorization_code",
+//         client_id: process.env.HUBSPOT_CLIENT_ID,
+//         client_secret: process.env.HUBSPOT_CLIENT_SECRET,
+//         redirect_uri: process.env.HUBSPOT_REDIRECT_URI,
+//         code: code,
+//       }),
+//     });
 
-    const data = await tokenResponse.json();
+//     const data = await tokenResponse.json();
 
-    console.log("Token Response:", data);
+//     if (!tokenResponse.ok) {
+//       console.error("OAuth token refresh failed:", data);
 
-    if (!data.access_token) {
-      console.error("OAuth Failed:", data);
-      return res.send("OAuth failed: " + JSON.stringify(data));
-    }
+//       throw new Error("Failed to refresh HubSpot access token");
+//     }
 
-    return res.json({
-      message: "OAuth successful",
-      access_token: data.access_token,
-      refresh_token: data.refresh_token,
-    });
-  } catch (error) {
-    console.error(error);
-    res.status(500).send("OAuth error");
-  }
+//     console.log("Token Response:", data);
+
+//     if (!data.access_token) {
+//       console.error("OAuth Failed:", data);
+//       return res.send("OAuth failed: " + JSON.stringify(data));
+//     }
+
+//     return res.json({
+//       message: "OAuth successful",
+//       access_token: data.access_token,
+//       refresh_token: data.refresh_token,
+//     });
+//   } catch (error) {
+//     console.error(error);
+//     res.status(500).send("OAuth error");
+//   }
+// });
+
+app.get("/oauth/callback", (req, res) => {
+  console.log("OAuth callback hit");
+
+  const code = req.query.code;
+
+  console.log("Auth Code:", code);
+
+  res.send("OAuth connected successfully");
 });
 
 app.post("/validate-from-hubspot", (req, res) => {
@@ -103,6 +119,70 @@ function normalizePhone(phone) {
   }
 
   return phone;
+}
+
+async function validatePhoneWithVeracity(phone, contactId) {
+  const normalizedPhone = normalizePhone(phone);
+
+  const response = await fetch("https://api.veracityhub.io/v2/verify/carrier", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      "X-API-TOKEN": process.env.VERACITY_API_KEY,
+    },
+    body: JSON.stringify({
+      phone_number: normalizedPhone,
+      contactId: contactId,
+    }),
+  });
+
+  if (!response.ok) {
+    throw new Error("Veracity API request failed");
+  }
+
+  const data = await response.json();
+
+  return {
+    normalizedPhone,
+    data,
+  };
+}
+
+async function updateHubSpotContact(accessToken, contactId, properties) {
+  const response = await fetch(
+    `https://api.hubapi.com/crm/v3/objects/contacts/${contactId}`,
+    {
+      method: "PATCH",
+      headers: {
+        Authorization: `Bearer ${accessToken}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        properties,
+      }),
+    },
+  );
+
+  if (!response.ok) {
+    throw new Error(`HubSpot update failed for contact ${contactId}`);
+  }
+
+  return response;
+}
+
+function sendError(res, statusCode, message) {
+  return res.status(statusCode).json({
+    success: false,
+    message,
+  });
+}
+
+function sendSuccess(res, message, data = {}) {
+  return res.json({
+    success: true,
+    message,
+    ...data,
+  });
 }
 
 async function getAccessToken() {
@@ -159,10 +239,7 @@ app.post("/validate-phone", async (req, res) => {
     const { contactId } = req.body;
 
     if (!contactId) {
-      return res.status(400).json({
-        success: false,
-        message: "contactId is required",
-      });
+      return sendError(res, 400, "contactId is required");
     }
 
     console.log("Contact ID:", contactId);
@@ -198,42 +275,12 @@ app.post("/validate-phone", async (req, res) => {
       });
     }
 
-    const normalizedPhone = normalizePhone(phone_number);
-
     console.log("Calling Veracity API...");
 
-    // 🔥 Veracity API call
-    const response = await fetch(
-      "https://api.veracityhub.io/v2/verify/carrier",
-      {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "X-API-TOKEN": process.env.VERACITY_API_KEY,
-        },
-        body: JSON.stringify({
-          phone_number: normalizedPhone,
-          contactId: "123",
-        }),
-      },
+    const { normalizedPhone, data } = await validatePhoneWithVeracity(
+      phone_number,
+      contactId,
     );
-
-    let data = {};
-
-    try {
-      const text = await response.text();
-      console.log("Veracity RAW:", text);
-
-      data = text ? JSON.parse(text) : {};
-    } catch (err) {
-      console.error("Veracity parse error:", err);
-      return res.status(500).json({
-        success: false,
-        message: "Invalid response from Veracity API",
-      });
-    }
-
-    console.log("Veracity Response:", data);
 
     console.log("Veracity completed");
 
@@ -246,59 +293,34 @@ app.post("/validate-phone", async (req, res) => {
 
     // 🔥 HubSpot update start
 
-    // const accessToken = await getAccessToken();
-
     console.log("Updating HubSpot properties...");
 
-    const hubspotResponse = await fetch(
-      `https://api.hubapi.com/crm/v3/objects/contacts/${contactId}`,
-      {
-        method: "PATCH",
-        headers: {
-          // Authorization: `Bearer ${process.env.HUBSPOT_ACCESS_TOKEN}`,
-          Authorization: `Bearer ${accessToken}`,
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          properties: {
-            veracity_validation_status: data.success ? "valid" : "invalid",
-            veracity_carrier: data.data?.carrier_name || "",
-            veracity_validated_at: new Date().toISOString(),
+    async function updateHubSpotContact(accessToken, contactId, properties) {
+      const response = await fetch(
+        `https://api.hubapi.com/crm/v3/objects/contacts/${contactId}`,
+        {
+          method: "PATCH",
+          headers: {
+            Authorization: `Bearer ${accessToken}`,
+            "Content-Type": "application/json",
           },
-        }),
-      },
-    );
+          body: JSON.stringify({
+            properties,
+          }),
+        },
+      );
 
-    if (!hubspotResponse.ok) {
-      const errorText = await hubspotResponse.text();
+      if (!response.ok) {
+        throw new Error(`HubSpot update failed for contact ${contactId}`);
+      }
 
-      console.error("HubSpot update failed:", errorText);
-
-      return res.status(500).json({
-        success: false,
-        message: "Failed to update HubSpot properties",
-      });
-    }
-
-    let hubspotData = {};
-
-    try {
-      const text = await hubspotResponse.text();
-      console.log("HubSpot RAW:", text);
-
-      hubspotData = text ? JSON.parse(text) : {};
-
-      console.log("HubSpot update completed");
-    } catch (err) {
-      console.error("HubSpot parse error:", err);
+      return response;
     }
 
     console.log("===== REQUEST END =====");
 
     // ✅ Clean response
-    return res.json({
-      success: data?.success ?? false,
-      message: data?.message || "No response",
+    return sendSuccess(res, data?.message || "Validation completed", {
       normalized_phone: normalizedPhone,
       carrier: data?.data?.carrier_name || "",
       type: data?.data?.carrier_type || "",
@@ -312,6 +334,168 @@ app.post("/validate-phone", async (req, res) => {
     return res.status(500).json({
       success: false,
       message: "Something went wrong",
+    });
+  }
+});
+
+// Bulk/List
+app.post("/bulk-validate", async (req, res) => {
+  try {
+    const { listId } = req.body;
+
+    if (!listId) {
+      return res.status(400).json({
+        success: false,
+        message: "listId is required",
+      });
+    }
+
+    console.log("Bulk validation started for list:", listId);
+
+    const batchJob = {
+      id: Date.now().toString(),
+      listId,
+      status: "queued",
+      total: 0,
+      processed: 0,
+      valid: 0,
+      invalid: 0,
+      failed: 0,
+      startedAt: new Date().toISOString(),
+    };
+
+    console.log("Batch Job Created:", batchJob);
+
+    const accessToken = await getAccessToken();
+
+    console.log("Fetching list members from HubSpot...");
+
+    const listResponse = await fetch(
+      `https://api.hubapi.com/crm/v3/lists/${listId}/memberships/join-order`,
+      {
+        method: "GET",
+        headers: {
+          Authorization: `Bearer ${accessToken}`,
+          "Content-Type": "application/json",
+        },
+      },
+    );
+
+    if (!listResponse.ok) {
+      const errorText = await listResponse.text();
+
+      console.error("Failed to fetch list members:", errorText);
+
+      return res.status(500).json({
+        success: false,
+        message: "Failed to fetch HubSpot list members",
+      });
+    }
+
+    const listData = await listResponse.json();
+
+    console.log(`Fetched ${listData.total} contacts from HubSpot`);
+
+    batchJob.total = listData.total;
+
+    batchJob.status = "running";
+
+    for (const member of listData.results) {
+      try {
+        const contactId = member.recordId;
+
+        console.log("Processing Contact:", contactId);
+
+        // FETCH CONTACT
+        const contactResponse = await fetch(
+          `https://api.hubapi.com/crm/v3/objects/contacts/${contactId}?properties=phone`,
+          {
+            headers: {
+              Authorization: `Bearer ${accessToken}`,
+            },
+          },
+        );
+
+        const contactData = await contactResponse.json();
+
+        const phone = contactData?.properties?.phone;
+
+        console.log("Phone:", phone);
+
+        if (!phone) {
+          batchJob.failed++;
+
+          console.log("No phone found");
+
+          continue;
+        }
+
+        const { normalizedPhone, data: veracityData } =
+          await validatePhoneWithVeracity(phone, contactId);
+
+        console.log(
+          `Validation completed for ${contactId} - ${
+            veracityData.success ? "VALID" : "INVALID"
+          }`,
+        );
+
+        // HUBSPOT UPDATE
+        await updateHubSpotContact(accessToken, contactId, {
+          veracity_validation_status: veracityData.success
+            ? "valid"
+            : "invalid",
+
+          veracity_carrier: veracityData?.data?.carrier_name || "",
+
+          veracity_validated_at: new Date().toISOString(),
+
+          bulk_validation_status: "completed",
+
+          bulk_validation_summary: veracityData.success
+            ? "Phone validated successfully"
+            : "Invalid phone number detected",
+
+          bulk_validated_at: new Date().toISOString(),
+        });
+
+        // COUNTERS
+        batchJob.processed++;
+
+        if (veracityData.success) {
+          batchJob.valid++;
+        } else {
+          batchJob.invalid++;
+        }
+
+        await new Promise((resolve) => setTimeout(resolve, 500));
+      } catch (error) {
+        console.error(
+          `Validation failed for contact ${contactId}:`,
+          error.message,
+        );
+
+        batchJob.failed++;
+      }
+    }
+
+    batchJob.status = "completed";
+
+    return sendSuccess(res, "Bulk validation completed successfully", {
+      summary: {
+        total: batchJob.total,
+        processed: batchJob.processed,
+        valid: batchJob.valid,
+        invalid: batchJob.invalid,
+        failed: batchJob.failed,
+        status: batchJob.status,
+      },
+    });
+  } catch (error) {
+    console.error("Bulk validation error:", error.message);
+
+    return res.status(500).json({
+      success: false,
+      message: "Bulk validation failed",
     });
   }
 });
