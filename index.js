@@ -295,8 +295,6 @@ app.post("/validate-phone", async (req, res) => {
       veracity_carrier: data.data?.carrier_name || "",
 
       veracity_validated_at: new Date().toISOString(),
-
-      
     });
 
     console.log("===== REQUEST END =====");
@@ -321,6 +319,8 @@ app.post("/validate-phone", async (req, res) => {
 app.post("/bulk-validate", async (req, res) => {
   try {
     const { listId } = req.body;
+
+    console.log("LIST ID RECEIVED:", listId);
 
     if (!listId) {
       return sendError(res, 400, "listId is required");
@@ -476,7 +476,15 @@ app.get("/hubspot-lists", async (req, res) => {
 
     const accessToken = await getAccessToken();
 
-    const response = await fetch("https://api.hubapi.com/contacts/v1/lists", {
+    // const response = await fetch("https://api.hubapi.com/contacts/v1/lists", {
+    //   method: "GET",
+    //   headers: {
+    //     Authorization: `Bearer ${accessToken}`,
+    //     "Content-Type": "application/json",
+    //   },
+    // });
+
+    const response = await fetch("https://api.hubapi.com/crm/v3/lists", {
       method: "GET",
       headers: {
         Authorization: `Bearer ${accessToken}`,
@@ -496,8 +504,13 @@ app.get("/hubspot-lists", async (req, res) => {
 
     console.log("LIST RESPONSE:", data);
 
-    const formattedLists = (data.lists || []).map((list) => ({
-      label: `${list.name} (${list.metaData?.size || 0})`,
+    // const formattedLists = (data.lists || []).map((list) => ({
+    //   label: `${list.name} (${list.metaData?.size || 0})`,
+    //   value: String(list.listId),
+    // }));
+
+    const formattedLists = (data.results || []).map((list) => ({
+      label: `${list.name} (${list.processingStatus?.totalRecords || 0})`,
       value: String(list.listId),
     }));
 
