@@ -295,6 +295,8 @@ app.post("/validate-phone", async (req, res) => {
       veracity_carrier: data.data?.carrier_name || "",
 
       veracity_validated_at: new Date().toISOString(),
+
+      
     });
 
     console.log("===== REQUEST END =====");
@@ -319,8 +321,6 @@ app.post("/validate-phone", async (req, res) => {
 app.post("/bulk-validate", async (req, res) => {
   try {
     const { listId } = req.body;
-
-    console.log("LIST ID RECEIVED:", listId);
 
     if (!listId) {
       return sendError(res, 400, "listId is required");
@@ -347,8 +347,7 @@ app.post("/bulk-validate", async (req, res) => {
     console.log("Fetching list members from HubSpot...");
 
     const listResponse = await fetch(
-      // `https://api.hubapi.com/crm/v3/lists/${listId}/memberships/join-order`,
-      `https://api.hubapi.com/contacts/v1/lists/${listId}/contacts/all`,
+      `https://api.hubapi.com/crm/v3/lists/${listId}/memberships/join-order`,
       {
         method: "GET",
         headers: {
@@ -374,12 +373,9 @@ app.post("/bulk-validate", async (req, res) => {
 
     batchJob.status = "running";
 
-    // for (const member of listData.results) {
-    for (const member of listData.contacts) {
+    for (const member of listData.results) {
       try {
-        // const contactId = member.recordId;
-
-        const contactId = member.vid;
+        const contactId = member.recordId;
 
         console.log("Processing Contact:", contactId);
 
@@ -500,13 +496,8 @@ app.get("/hubspot-lists", async (req, res) => {
 
     console.log("LIST RESPONSE:", data);
 
-    // const formattedLists = (data.lists || []).map((list) => ({
-    //   label: `${list.name} (${list.metaData?.size || 0})`,
-    //   value: String(list.listId),
-    // }));
-
-    const formattedLists = (data.results || []).map((list) => ({
-      label: `${list.name} (${list.processingStatus?.totalRecords || 0})`,
+    const formattedLists = (data.lists || []).map((list) => ({
+      label: `${list.name} (${list.metaData?.size || 0})`,
       value: String(list.listId),
     }));
 
