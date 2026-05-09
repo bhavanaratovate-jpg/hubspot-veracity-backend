@@ -1,11 +1,9 @@
 {
   "name": "hubspot-veracity-backend",
   "version": "1.0.0",
-
   "engines": {
     "node": "20.x"
   },
-  
   "description": "",
   "main": "index.js",
   "scripts": {
@@ -23,7 +21,7 @@
     "dotenv": "^17.4.2",
     "express": "^5.2.1",
     "node-fetch": "^2.7.0",
-    "sqlite3": "^6.0.1"
+    "sqlite3": "^5.1.6"
   },
   "devDependencies": {
     "nodemon": "^3.1.14"
