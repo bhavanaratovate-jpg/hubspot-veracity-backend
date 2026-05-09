@@ -25,6 +25,16 @@ app.use(express.json());
 
 const PORT = process.env.PORT || 3000;
 
+let propertyMappings = {
+  phoneProperty: "phone",
+
+  validationStatusProperty: "veracity_validation_status",
+
+  carrierProperty: "veracity_carrier",
+
+  validatedAtProperty: "veracity_validated_at",
+};
+
 let cachedAccessToken = null;
 let tokenExpiryTime = null;
 
@@ -261,7 +271,7 @@ app.post("/validate-phone", async (req, res) => {
 
     const contactRes = await fetch(
       // `https://api.hubapi.com/crm/v3/objects/contacts/${contactId}?properties=phone`,
-      `https://api.hubapi.com/crm/v3/objects/${hubspotObjectType}/${contactId}?properties=phone`,
+      `https://api.hubapi.com/crm/v3/objects/${hubspotObjectType}/${contactId}?properties=${propertyMappings.phoneProperty}`,
       {
         method: "GET",
         headers: {
@@ -275,7 +285,9 @@ app.post("/validate-phone", async (req, res) => {
 
     console.log("HubSpot Contact RAW:", contactData);
 
-    const phone_number = contactData?.properties?.phone;
+    // const phone_number = contactData?.properties?.phone;
+    const phone_number =
+      contactData?.properties?.[propertyMappings.phoneProperty];
 
     console.log("Fetched Phone:", phone_number);
 
@@ -303,11 +315,19 @@ app.post("/validate-phone", async (req, res) => {
     console.log("VERACITY DATA:", data);
 
     await updateHubSpotObject(accessToken, hubspotObjectType, contactId, {
-      veracity_validation_status: data.success ? "valid" : "invalid",
+      // veracity_validation_status: data.success ? "valid" : "invalid",
 
-      veracity_carrier: data.data?.carrier_name || "",
+      // veracity_carrier: data.data?.carrier_name || "",
 
-      veracity_validated_at: new Date().toISOString(),
+      // veracity_validated_at: new Date().toISOString(),
+
+      [propertyMappings.validationStatusProperty]: data.success
+        ? "valid"
+        : "invalid",
+
+      [propertyMappings.carrierProperty]: data.data?.carrier_name || "",
+
+      [propertyMappings.validatedAtProperty]: new Date().toISOString(),
     });
 
     console.log("===== REQUEST END =====");
@@ -394,7 +414,7 @@ app.post("/bulk-validate", async (req, res) => {
 
         // FETCH CONTACT
         const contactResponse = await fetch(
-          `https://api.hubapi.com/crm/v3/objects/contacts/${contactId}?properties=phone`,
+          `https://api.hubapi.com/crm/v3/objects/contacts/${contactId}?properties=${propertyMappings.phoneProperty}`,
           {
             headers: {
               Authorization: `Bearer ${accessToken}`,
@@ -404,7 +424,8 @@ app.post("/bulk-validate", async (req, res) => {
 
         const contactData = await contactResponse.json();
 
-        const phone = contactData?.properties?.phone;
+        // const phone = contactData?.properties?.phone;
+        const phone = contactData?.properties?.[propertyMappings.phoneProperty];
 
         console.log("Phone:", phone);
 
@@ -480,6 +501,51 @@ app.post("/bulk-validate", async (req, res) => {
     console.error("Bulk validation error:", error.message);
 
     return sendError(res, 500, "Bulk validation failed");
+  }
+});
+
+app.get("/settings", async (req, res) => {
+  try {
+    return sendSuccess(res, "Settings fetched successfully", {
+      mappings: propertyMappings,
+    });
+  } catch (error) {
+    console.error("Settings fetch error:", error.message);
+
+    return sendError(res, 500, "Unable to fetch settings");
+  }
+});
+
+app.post("/settings", async (req, res) => {
+  try {
+    const {
+      phoneProperty,
+      validationStatusProperty,
+      carrierProperty,
+      validatedAtProperty,
+    } = req.body;
+
+    propertyMappings = {
+      phoneProperty: phoneProperty || propertyMappings.phoneProperty,
+
+      validationStatusProperty:
+        validationStatusProperty || propertyMappings.validationStatusProperty,
+
+      carrierProperty: carrierProperty || propertyMappings.carrierProperty,
+
+      validatedAtProperty:
+        validatedAtProperty || propertyMappings.validatedAtProperty,
+    };
+
+    console.log("UPDATED MAPPINGS:", propertyMappings);
+
+    return sendSuccess(res, "Settings updated successfully", {
+      mappings: propertyMappings,
+    });
+  } catch (error) {
+    console.error("Settings update error:", error.message);
+
+    return sendError(res, 500, "Unable to update settings");
   }
 });
 
