@@ -105,7 +105,6 @@ app.get("/install", (req, res) => {
 //   }
 // });
 
-
 app.get("/oauth/callback", async (req, res) => {
   try {
     console.log("OAuth callback hit");
@@ -114,21 +113,23 @@ app.get("/oauth/callback", async (req, res) => {
 
     console.log("Auth Code:", code);
 
-    const tokenResponse = await axios.post(
-      "https://api.hubapi.com/oauth/v1/token",
-      new URLSearchParams({
+    const response = await fetch("https://api.hubapi.com/oauth/v1/token", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/x-www-form-urlencoded",
+      },
+      body: new URLSearchParams({
         grant_type: "authorization_code",
         client_id: process.env.HUBSPOT_CLIENT_ID,
         client_secret: process.env.HUBSPOT_CLIENT_SECRET,
         redirect_uri: process.env.HUBSPOT_REDIRECT_URI,
         code,
       }),
-      {
-        headers: {
-          "Content-Type": "application/x-www-form-urlencoded",
-        },
-      },
-    );
+    });
+
+    const tokenResponse = await response.json();
+
+    console.log("TOKEN RESPONSE:", tokenResponse);
 
     console.log("TOKEN RESPONSE:", tokenResponse.data);
 
