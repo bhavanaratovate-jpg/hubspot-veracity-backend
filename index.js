@@ -611,6 +611,7 @@ app.get("/settings", async (req, res) => {
 // });
 
 app.post("/settings", async (req, res) => {
+  console.log(req.body);
   try {
     const {
       phoneProperty,
@@ -652,6 +653,10 @@ app.post("/settings", async (req, res) => {
 
           return sendError(res, 500, "Failed to save settings");
         }
+
+        console.log("DB SAVE SUCCESS");
+        console.log(this.changes);
+        console.log(this.lastID);
 
         return sendSuccess(res, "Settings saved successfully");
       },
