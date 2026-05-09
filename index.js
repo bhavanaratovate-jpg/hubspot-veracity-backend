@@ -44,6 +44,16 @@ app.get("/", (req, res) => {
   res.send("Server is running 🚀");
 });
 
+app.get("/install", (req, res) => {
+  const installUrl =
+    `https://app.hubspot.com/oauth/authorize` +
+    `?client_id=${process.env.HUBSPOT_CLIENT_ID}` +
+    `&scope=crm.objects.contacts.read crm.objects.contacts.write crm.lists.read` +
+    `&redirect_uri=${process.env.HUBSPOT_REDIRECT_URI}`;
+
+  res.redirect(installUrl);
+});
+
 // app.get("/oauth/callback", async (req, res) => {
 //   try {
 //     const code = req.query.code;
@@ -95,14 +105,39 @@ app.get("/", (req, res) => {
 //   }
 // });
 
-app.get("/oauth/callback", (req, res) => {
-  console.log("OAuth callback hit");
 
-  const code = req.query.code;
+app.get("/oauth/callback", async (req, res) => {
+  try {
+    console.log("OAuth callback hit");
 
-  console.log("Auth Code:", code);
+    const { code } = req.query;
 
-  res.send("OAuth connected successfully");
+    console.log("Auth Code:", code);
+
+    const tokenResponse = await axios.post(
+      "https://api.hubapi.com/oauth/v1/token",
+      new URLSearchParams({
+        grant_type: "authorization_code",
+        client_id: process.env.HUBSPOT_CLIENT_ID,
+        client_secret: process.env.HUBSPOT_CLIENT_SECRET,
+        redirect_uri: process.env.HUBSPOT_REDIRECT_URI,
+        code,
+      }),
+      {
+        headers: {
+          "Content-Type": "application/x-www-form-urlencoded",
+        },
+      },
+    );
+
+    console.log("TOKEN RESPONSE:", tokenResponse.data);
+
+    res.send("OAuth token generated successfully");
+  } catch (error) {
+    console.error(error.response?.data || error.message);
+
+    res.status(500).send("OAuth failed");
+  }
 });
 
 app.post("/validate-from-hubspot", (req, res) => {

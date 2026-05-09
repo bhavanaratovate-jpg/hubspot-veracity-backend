@@ -24,6 +24,14 @@ db.serialize(() => {
       validatedAtProperty TEXT
     )
   `);
+  db.run(`
+  CREATE TABLE IF NOT EXISTS oauth_tokens (
+    portalId TEXT PRIMARY KEY,
+    accessToken TEXT,
+    refreshToken TEXT,
+    expiresAt TEXT
+  )
+`);
 });
 
 module.exports = db;
