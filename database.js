@@ -1,6 +1,11 @@
 const sqlite3 = require("sqlite3").verbose();
+const path = require("path");
 
-const db = new sqlite3.Database("./settings.db", (err) => {
+const db = new sqlite3.Database(path.join(__dirname, "settings.db"), (err) => {
+  console.log(__dirname);
+
+  console.log(process.cwd());
+
   if (err) {
     console.error("Database connection error:", err.message);
   } else {
