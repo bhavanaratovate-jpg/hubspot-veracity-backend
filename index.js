@@ -307,7 +307,7 @@ app.post("/validate-phone", async (req, res) => {
 
       veracity_carrier: data.data?.carrier_name || "",
 
-      // veracity_validated_at: new Date().toISOString(),
+      veracity_validated_at: new Date().toISOString(),
     });
 
     console.log("===== REQUEST END =====");
