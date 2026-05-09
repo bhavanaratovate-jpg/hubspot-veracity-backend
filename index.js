@@ -203,7 +203,7 @@ function sendSuccess(res, message, data = {}) {
   });
 }
 
-function getMappings() {
+function getMappings(portalId) {
   return new Promise((resolve, reject) => {
     db.get(
       `SELECT * FROM mappings WHERE portalId = ?`,
@@ -649,7 +649,7 @@ app.post("/settings", async (req, res) => {
       `,
       [
         // "default",
-        [portalId],
+        portalId,
         phoneProperty,
         validationStatusProperty,
         carrierProperty,
