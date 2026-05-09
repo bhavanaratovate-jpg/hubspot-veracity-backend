@@ -592,6 +592,43 @@ app.get("/hubspot-lists", async (req, res) => {
   }
 });
 
+app.get("/hubspot-properties/:objectType", async (req, res) => {
+  try {
+    const { objectType } = req.params;
+
+    const accessToken = await getAccessToken();
+
+    const response = await fetch(
+      `https://api.hubapi.com/crm/v3/properties/${objectType}`,
+      {
+        headers: {
+          Authorization: `Bearer ${accessToken}`,
+          "Content-Type": "application/json",
+        },
+      },
+    );
+
+    const data = await response.json();
+
+    const formattedProperties = data.results.map((prop) => ({
+      label: prop.label,
+      value: prop.name,
+    }));
+
+    res.json({
+      success: true,
+      properties: formattedProperties,
+    });
+  } catch (error) {
+    console.error("PROPERTY FETCH ERROR:", error);
+
+    res.status(500).json({
+      success: false,
+      message: "Failed to fetch HubSpot properties",
+    });
+  }
+});
+
 app.listen(PORT, () => {
   console.log(`Server running on http://localhost:${PORT}`);
 });
