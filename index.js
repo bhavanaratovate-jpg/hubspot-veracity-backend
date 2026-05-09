@@ -393,7 +393,8 @@ app.post("/validate-phone", async (req, res) => {
 // Bulk/List
 app.post("/bulk-validate", async (req, res) => {
   // const propertyMappings = await getMappings();
-  const propertyMappings = await getMappings(req.body.portalId);
+  // const propertyMappings = await getMappings(req.body.portalId);
+  const propertyMappings = await getMappings(portalId);
   try {
     const { listId } = req.body;
 
