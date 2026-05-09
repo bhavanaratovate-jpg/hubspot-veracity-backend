@@ -148,9 +148,15 @@ async function validatePhoneWithVeracity(phone, contactId) {
   };
 }
 
-async function updateHubSpotContact(accessToken, contactId, properties) {
+async function updateHubSpotObject(
+  accessToken,
+  objectType,
+  recordId,
+  properties,
+) {
   const response = await fetch(
-    `https://api.hubapi.com/crm/v3/objects/contacts/${contactId}`,
+    // `https://api.hubapi.com/crm/v3/objects/contacts/${contactId}`,
+    `https://api.hubapi.com/crm/v3/objects/${objectType}/${recordId}`,
     {
       method: "PATCH",
       headers: {
@@ -164,7 +170,8 @@ async function updateHubSpotContact(accessToken, contactId, properties) {
   );
 
   if (!response.ok) {
-    throw new Error(`HubSpot update failed for contact ${contactId}`);
+    // throw new Error(`HubSpot update failed for contact ${contactId}`);
+    throw new Error(`HubSpot update failed for ${objectType} ${recordId}`);
   }
 
   return response;
@@ -236,11 +243,14 @@ app.post("/validate-phone", async (req, res) => {
     // ✅ Now using phone_number everywhere
     // const { phone_number, contactId } = req.body;
 
-    const { contactId } = req.body;
+    const { contactId, objectType } = req.body;
 
     if (!contactId) {
       return sendError(res, 400, "contactId is required");
     }
+
+    const hubspotObjectType =
+      objectType === "companies" ? "companies" : "contacts";
 
     console.log("Contact ID:", contactId);
 
@@ -250,7 +260,8 @@ app.post("/validate-phone", async (req, res) => {
     const accessToken = await getAccessToken();
 
     const contactRes = await fetch(
-      `https://api.hubapi.com/crm/v3/objects/contacts/${contactId}?properties=phone`,
+      // `https://api.hubapi.com/crm/v3/objects/contacts/${contactId}?properties=phone`,
+      `https://api.hubapi.com/crm/v3/objects/${hubspotObjectType}/${contactId}?properties=phone`,
       {
         method: "GET",
         headers: {
@@ -289,14 +300,14 @@ app.post("/validate-phone", async (req, res) => {
 
     console.log("Updating HubSpot properties...");
 
-    await updateHubSpotContact(accessToken, contactId, {
+    console.log("VERACITY DATA:", data);
+
+    await updateHubSpotObject(accessToken, hubspotObjectType, contactId, {
       veracity_validation_status: data.success ? "valid" : "invalid",
 
-      veracity_carrier: data.data?.carrier_name || "",
+      // veracity_carrier: data.data?.carrier_name || "",
 
-      veracity_validated_at: new Date().toISOString(),
-
-      
+      // veracity_validated_at: new Date().toISOString(),
     });
 
     console.log("===== REQUEST END =====");
@@ -312,6 +323,8 @@ app.post("/validate-phone", async (req, res) => {
     });
   } catch (error) {
     console.error("Error:", error.message);
+
+    console.error("FULL ERROR:", error);
 
     return sendError(res, 500, "Something went wrong");
   }
@@ -413,7 +426,7 @@ app.post("/bulk-validate", async (req, res) => {
         );
 
         // HUBSPOT UPDATE
-        await updateHubSpotContact(accessToken, contactId, {
+        await updateHubSpotObject(accessToken, "contacts", contactId, {
           veracity_validation_status: veracityData.success
             ? "valid"
             : "invalid",
