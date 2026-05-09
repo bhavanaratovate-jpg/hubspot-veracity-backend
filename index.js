@@ -611,7 +611,8 @@ app.get("/hubspot-properties/:objectType", async (req, res) => {
     const data = await response.json();
 
     const formattedProperties = data.results.map((prop) => ({
-      label: prop.label,
+      // label: prop.label,
+      label: `${prop.label} (${prop.name})`,
       value: prop.name,
     }));
 
