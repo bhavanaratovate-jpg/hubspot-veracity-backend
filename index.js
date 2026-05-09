@@ -207,7 +207,8 @@ function getMappings() {
   return new Promise((resolve, reject) => {
     db.get(
       `SELECT * FROM mappings WHERE portalId = ?`,
-      ["default"],
+      // ["default"],
+      [portalId],
       (err, row) => {
         if (err) {
           reject(err);
@@ -286,7 +287,8 @@ app.post("/validate-phone", async (req, res) => {
     const hubspotObjectType =
       objectType === "companies" ? "companies" : "contacts";
 
-    const propertyMappings = await getMappings();
+    // const propertyMappings = await getMappings();
+    const propertyMappings = await getMappings(req.body.portalId);
 
     console.log("Contact ID:", contactId);
 
@@ -378,6 +380,8 @@ app.post("/validate-phone", async (req, res) => {
 
 // Bulk/List
 app.post("/bulk-validate", async (req, res) => {
+  // const propertyMappings = await getMappings();
+  const propertyMappings = await getMappings(req.body.portalId);
   try {
     const { listId } = req.body;
 
@@ -474,13 +478,14 @@ app.post("/bulk-validate", async (req, res) => {
 
         // HUBSPOT UPDATE
         await updateHubSpotObject(accessToken, "contacts", contactId, {
-          veracity_validation_status: veracityData.success
+          [propertyMappings.validationStatusProperty]: veracityData.success
             ? "valid"
             : "invalid",
 
-          veracity_carrier: veracityData?.data?.carrier_name || "",
+          [propertyMappings.carrierProperty]:
+            veracityData?.data?.carrier_name || "",
 
-          veracity_validated_at: new Date().toISOString(),
+          [propertyMappings.validatedAtProperty]: new Date().toISOString(),
 
           bulk_validation_status: "completed",
 
@@ -546,7 +551,8 @@ app.get("/settings", async (req, res) => {
   try {
     db.get(
       `SELECT * FROM mappings WHERE portalId = ?`,
-      ["default"],
+      // ["default"],
+      [req.query.portalId],
       (err, row) => {
         if (err) {
           console.error(err);
@@ -614,6 +620,7 @@ app.post("/settings", async (req, res) => {
   console.log(req.body);
   try {
     const {
+      portalId,
       phoneProperty,
       validationStatusProperty,
       carrierProperty,
@@ -641,7 +648,8 @@ app.post("/settings", async (req, res) => {
           excluded.validatedAtProperty
       `,
       [
-        "default",
+        // "default",
+        [portalId],
         phoneProperty,
         validationStatusProperty,
         carrierProperty,
