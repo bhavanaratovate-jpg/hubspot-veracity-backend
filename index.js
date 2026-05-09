@@ -280,6 +280,8 @@ app.post("/validate-phone", async (req, res) => {
 
     const { contactId, objectType } = req.body;
 
+    const portalId = req.body.portalId;
+
     if (!contactId) {
       return sendError(res, 400, "contactId is required");
     }
@@ -288,7 +290,8 @@ app.post("/validate-phone", async (req, res) => {
       objectType === "companies" ? "companies" : "contacts";
 
     // const propertyMappings = await getMappings();
-    const propertyMappings = await getMappings(req.body.portalId);
+    // const propertyMappings = await getMappings(req.body.portalId);
+    const propertyMappings = await getMappings(portalId);
 
     console.log("Contact ID:", contactId);
 
@@ -394,9 +397,12 @@ app.post("/validate-phone", async (req, res) => {
 app.post("/bulk-validate", async (req, res) => {
   // const propertyMappings = await getMappings();
   // const propertyMappings = await getMappings(req.body.portalId);
+
   const propertyMappings = await getMappings(portalId);
   try {
-    const { listId } = req.body;
+    // const { listId } = req.body;
+
+    const { listId, portalId } = req.body;
 
     if (!listId) {
       return sendError(res, 400, "listId is required");
