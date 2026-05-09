@@ -305,7 +305,7 @@ app.post("/validate-phone", async (req, res) => {
     await updateHubSpotObject(accessToken, hubspotObjectType, contactId, {
       veracity_validation_status: data.success ? "valid" : "invalid",
 
-      // veracity_carrier: data.data?.carrier_name || "",
+      veracity_carrier: data.data?.carrier_name || "",
 
       // veracity_validated_at: new Date().toISOString(),
     });
