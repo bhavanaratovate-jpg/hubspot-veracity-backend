@@ -342,6 +342,18 @@ app.post("/validate-phone", async (req, res) => {
 
     console.log("VERACITY DATA:", data);
 
+    console.log("FINAL HUBSPOT PROPERTIES:");
+
+    console.log({
+      [propertyMappings.validationStatusProperty]: data.success
+        ? "valid"
+        : "invalid",
+
+      [propertyMappings.carrierProperty]: data.data?.carrier_name || "",
+
+      [propertyMappings.validatedAtProperty]: new Date().toISOString(),
+    });
+
     await updateHubSpotObject(accessToken, hubspotObjectType, contactId, {
       // veracity_validation_status: data.success ? "valid" : "invalid",
 
