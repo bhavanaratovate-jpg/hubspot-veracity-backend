@@ -1,6 +1,7 @@
 const express = require("express");
 const fetch = require("node-fetch");
 const cors = require("cors");
+const db = require("./database");
 require("dotenv").config();
 
 const requiredEnvVars = [
@@ -202,6 +203,29 @@ function sendSuccess(res, message, data = {}) {
   });
 }
 
+function getMappings() {
+  return new Promise((resolve, reject) => {
+    db.get(
+      `SELECT * FROM mappings WHERE portalId = ?`,
+      ["default"],
+      (err, row) => {
+        if (err) {
+          reject(err);
+        } else {
+          resolve(
+            row || {
+              phoneProperty: "phone",
+              validationStatusProperty: "veracity_validation_status",
+              carrierProperty: "veracity_carrier",
+              validatedAtProperty: "veracity_validated_at",
+            },
+          );
+        }
+      },
+    );
+  });
+}
+
 async function getAccessToken() {
   try {
     // ✅ token still valid
@@ -261,6 +285,8 @@ app.post("/validate-phone", async (req, res) => {
 
     const hubspotObjectType =
       objectType === "companies" ? "companies" : "contacts";
+
+    const propertyMappings = await getMappings();
 
     console.log("Contact ID:", contactId);
 
@@ -504,17 +530,85 @@ app.post("/bulk-validate", async (req, res) => {
   }
 });
 
+// app.get("/settings", async (req, res) => {
+//   try {
+//     return sendSuccess(res, "Settings fetched successfully", {
+//       mappings: propertyMappings,
+//     });
+//   } catch (error) {
+//     console.error("Settings fetch error:", error.message);
+
+//     return sendError(res, 500, "Unable to fetch settings");
+//   }
+// });
+
 app.get("/settings", async (req, res) => {
   try {
-    return sendSuccess(res, "Settings fetched successfully", {
-      mappings: propertyMappings,
-    });
+    db.get(
+      `SELECT * FROM mappings WHERE portalId = ?`,
+      ["default"],
+      (err, row) => {
+        if (err) {
+          console.error(err);
+
+          return sendError(res, 500, "Database error");
+        }
+
+        if (!row) {
+          return sendSuccess(res, "No settings found", {
+            mappings: {
+              phoneProperty: "phone",
+              validationStatusProperty: "veracity_validation_status",
+              carrierProperty: "veracity_carrier",
+              validatedAtProperty: "veracity_validated_at",
+            },
+          });
+        }
+
+        return sendSuccess(res, "Settings fetched successfully", {
+          mappings: row,
+        });
+      },
+    );
   } catch (error) {
-    console.error("Settings fetch error:", error.message);
+    console.error(error);
 
     return sendError(res, 500, "Unable to fetch settings");
   }
 });
+
+// app.post("/settings", async (req, res) => {
+//   try {
+//     const {
+//       phoneProperty,
+//       validationStatusProperty,
+//       carrierProperty,
+//       validatedAtProperty,
+//     } = req.body;
+
+//     propertyMappings = {
+//       phoneProperty: phoneProperty || propertyMappings.phoneProperty,
+
+//       validationStatusProperty:
+//         validationStatusProperty || propertyMappings.validationStatusProperty,
+
+//       carrierProperty: carrierProperty || propertyMappings.carrierProperty,
+
+//       validatedAtProperty:
+//         validatedAtProperty || propertyMappings.validatedAtProperty,
+//     };
+
+//     console.log("UPDATED MAPPINGS:", propertyMappings);
+
+//     return sendSuccess(res, "Settings updated successfully", {
+//       mappings: propertyMappings,
+//     });
+//   } catch (error) {
+//     console.error("Settings update error:", error.message);
+
+//     return sendError(res, 500, "Unable to update settings");
+//   }
+// });
 
 app.post("/settings", async (req, res) => {
   try {
@@ -525,27 +619,47 @@ app.post("/settings", async (req, res) => {
       validatedAtProperty,
     } = req.body;
 
-    propertyMappings = {
-      phoneProperty: phoneProperty || propertyMappings.phoneProperty,
+    db.run(
+      `
+      INSERT INTO mappings (
+        portalId,
+        phoneProperty,
+        validationStatusProperty,
+        carrierProperty,
+        validatedAtProperty
+      )
+      VALUES (?, ?, ?, ?, ?)
 
-      validationStatusProperty:
-        validationStatusProperty || propertyMappings.validationStatusProperty,
+      ON CONFLICT(portalId)
+      DO UPDATE SET
+        phoneProperty = excluded.phoneProperty,
+        validationStatusProperty =
+          excluded.validationStatusProperty,
+        carrierProperty = excluded.carrierProperty,
+        validatedAtProperty =
+          excluded.validatedAtProperty
+      `,
+      [
+        "default",
+        phoneProperty,
+        validationStatusProperty,
+        carrierProperty,
+        validatedAtProperty,
+      ],
+      function (err) {
+        if (err) {
+          console.error(err);
 
-      carrierProperty: carrierProperty || propertyMappings.carrierProperty,
+          return sendError(res, 500, "Failed to save settings");
+        }
 
-      validatedAtProperty:
-        validatedAtProperty || propertyMappings.validatedAtProperty,
-    };
-
-    console.log("UPDATED MAPPINGS:", propertyMappings);
-
-    return sendSuccess(res, "Settings updated successfully", {
-      mappings: propertyMappings,
-    });
+        return sendSuccess(res, "Settings saved successfully");
+      },
+    );
   } catch (error) {
-    console.error("Settings update error:", error.message);
+    console.error(error);
 
-    return sendError(res, 500, "Unable to update settings");
+    return sendError(res, 500, "Unable to save settings");
   }
 });
 
@@ -589,44 +703,6 @@ app.get("/hubspot-lists", async (req, res) => {
     console.error("List fetch error:", error.message);
 
     return sendError(res, 500, "Unable to fetch lists");
-  }
-});
-
-app.get("/hubspot-properties/:objectType", async (req, res) => {
-  try {
-    const { objectType } = req.params;
-
-    const accessToken = await getAccessToken();
-
-    const response = await fetch(
-      `https://api.hubapi.com/crm/v3/properties/${objectType}`,
-      {
-        headers: {
-          Authorization: `Bearer ${accessToken}`,
-          "Content-Type": "application/json",
-        },
-      },
-    );
-
-    const data = await response.json();
-
-    const formattedProperties = data.results.map((prop) => ({
-      label: prop.label,
-      description: prop.name,
-      value: prop.name,
-    }));
-
-    res.json({
-      success: true,
-      properties: formattedProperties,
-    });
-  } catch (error) {
-    console.error("PROPERTY FETCH ERROR:", error);
-
-    res.status(500).json({
-      success: false,
-      message: "Failed to fetch HubSpot properties",
-    });
   }
 });
 
