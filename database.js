@@ -16,14 +16,24 @@ const db = new sqlite3.Database(path.join(__dirname, "settings.db"), (err) => {
 db.serialize(() => {
   db.run(`
     CREATE TABLE IF NOT EXISTS mappings (
-      id INTEGER PRIMARY KEY AUTOINCREMENT,
-      portalId TEXT UNIQUE,
-      phoneProperty TEXT,
-      validationStatusProperty TEXT,
-      carrierProperty TEXT,
-      validatedAtProperty TEXT
-    )
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    portalId TEXT UNIQUE,
+    phoneProperty TEXT,
+    validationStatusProperty TEXT,
+    carrierProperty TEXT,
+    validatedAtProperty TEXT,
+    veracityApiKey TEXT,
+    rateLimitPerHour INTEGER DEFAULT 100,
+    retentionDays INTEGER DEFAULT 30
+  )
   `);
+
+  // db.run(`ALTER TABLE mappings ADD COLUMN veracityApiKey TEXT`);
+  // db.run(
+  //   `ALTER TABLE mappings ADD COLUMN rateLimitPerHour INTEGER DEFAULT 100`,
+  // );
+  // db.run(`ALTER TABLE mappings ADD COLUMN retentionDays INTEGER DEFAULT 30`);
+
   db.run(`
   CREATE TABLE IF NOT EXISTS oauth_tokens (
   id INTEGER PRIMARY KEY AUTOINCREMENT,

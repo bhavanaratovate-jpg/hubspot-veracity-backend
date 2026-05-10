@@ -198,6 +198,7 @@ async function validatePhoneWithVeracity(phone, contactId) {
     headers: {
       "Content-Type": "application/json",
       "X-API-TOKEN": process.env.VERACITY_API_KEY,
+      // "X-API-TOKEN": mappings.veracityApiKey || process.env.VERACITY_API_KEY,
     },
     body: JSON.stringify({
       phone_number: normalizedPhone,
@@ -722,6 +723,9 @@ app.post("/settings", async (req, res) => {
       validationStatusProperty,
       carrierProperty,
       validatedAtProperty,
+      veracityApiKey,
+      rateLimitPerHour,
+      retentionDays,
     } = req.body;
 
     db.run(
@@ -731,9 +735,12 @@ app.post("/settings", async (req, res) => {
         phoneProperty,
         validationStatusProperty,
         carrierProperty,
-        validatedAtProperty
+        validatedAtProperty,
+        veracityApiKey,
+        rateLimitPerHour,
+        retentionDays
       )
-      VALUES (?, ?, ?, ?, ?)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?)
 
       ON CONFLICT(portalId)
       DO UPDATE SET
@@ -742,7 +749,13 @@ app.post("/settings", async (req, res) => {
           excluded.validationStatusProperty,
         carrierProperty = excluded.carrierProperty,
         validatedAtProperty =
-          excluded.validatedAtProperty
+          excluded.validatedAtProperty,
+          veracityApiKey =
+          excluded.veracityApiKey,
+          rateLimitPerHour =
+          excluded.rateLimitPerHour,
+          retentionDays =
+          excluded.retentionDays
       `,
       [
         // "default",
@@ -751,6 +764,9 @@ app.post("/settings", async (req, res) => {
         validationStatusProperty,
         carrierProperty,
         validatedAtProperty,
+        veracityApiKey,
+        rateLimitPerHour,
+        retentionDays,
       ],
       function (err) {
         if (err) {
