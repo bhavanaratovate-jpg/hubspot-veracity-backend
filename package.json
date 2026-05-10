@@ -7,9 +7,15 @@
   "description": "",
   "main": "index.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1",
     "start": "node index.js",
-    "dev": "nodemon index.js"
+    "dev": "nodemon index.js",
+    "test": "cross-env NODE_ENV=test jest",
+    "e2e": "playwright test"
+  },
+  "jest": {
+    "setupFiles": [
+      "./jest.setup.js"
+    ]
   },
   "keywords": [],
   "author": "",
@@ -24,6 +30,11 @@
     "sqlite3": "^5.1.6"
   },
   "devDependencies": {
-    "nodemon": "^3.1.14"
+    "@playwright/test": "^1.59.1",
+    "cross-env": "^10.1.0",
+    "jest": "^30.4.2",
+    "jest-fetch-mock": "^3.0.3",
+    "nodemon": "^3.1.14",
+    "supertest": "^7.2.2"
   }
 }

@@ -4,11 +4,23 @@ const cors = require("cors");
 const db = require("./database");
 require("dotenv").config();
 
+const metrics = {
+  totalCalls: 0,
+
+  successCount: 0,
+
+  failureCount: 0,
+
+  totalLatency: 0,
+};
+
+const ALERT_THRESHOLD = 0.3;
+
 const requiredEnvVars = [
   "VERACITY_API_KEY",
   "HUBSPOT_CLIENT_ID",
   "HUBSPOT_CLIENT_SECRET",
-  "HUBSPOT_REFRESH_TOKEN",
+  // "HUBSPOT_REFRESH_TOKEN",
   "HUBSPOT_REDIRECT_URI",
 ];
 
@@ -34,6 +46,8 @@ let propertyMappings = {
   carrierProperty: "veracity_carrier",
 
   validatedAtProperty: "veracity_validated_at",
+
+  failureReasonProperty: "veracity_failure_reason",
 };
 
 let cachedAccessToken = null;
@@ -54,64 +68,19 @@ app.get("/install", (req, res) => {
   res.redirect(installUrl);
 });
 
-// app.get("/oauth/callback", async (req, res) => {
-//   try {
-//     const code = req.query.code;
-
-//     if (!code) {
-//       return res.send("No code received");
-//     }
-
-//     console.log("Auth Code:", code);
-
-//     // 🔥 TOKEN EXCHANGE
-//     const tokenResponse = await fetch("https://api.hubapi.com/oauth/v1/token", {
-//       method: "POST",
-//       headers: {
-//         "Content-Type": "application/x-www-form-urlencoded",
-//       },
-//       body: new URLSearchParams({
-//         grant_type: "authorization_code",
-//         client_id: process.env.HUBSPOT_CLIENT_ID,
-//         client_secret: process.env.HUBSPOT_CLIENT_SECRET,
-//         redirect_uri: process.env.HUBSPOT_REDIRECT_URI,
-//         code: code,
-//       }),
-//     });
-
-//     const data = await tokenResponse.json();
-
-//     if (!tokenResponse.ok) {
-//       console.error("OAuth token refresh failed:", data);
-
-//       throw new Error("Failed to refresh HubSpot access token");
-//     }
-
-//     console.log("Token Response:", data);
-
-//     if (!data.access_token) {
-//       console.error("OAuth Failed:", data);
-//       return res.send("OAuth failed: " + JSON.stringify(data));
-//     }
-
-//     return res.json({
-//       message: "OAuth successful",
-//       access_token: data.access_token,
-//       refresh_token: data.refresh_token,
-//     });
-//   } catch (error) {
-//     console.error(error);
-//     res.status(500).send("OAuth error");
-//   }
-// });
-
 app.get("/oauth/callback", async (req, res) => {
   try {
-    console.log("OAuth callback hit");
+    // console.log("OAuth callback hit");
+
+    logInfo("OAuth callback hit");
 
     const { code } = req.query;
 
-    console.log("Auth Code:", code);
+    // console.log("Auth Code:", code);
+
+    logInfo("OAuth auth code received", {
+      code,
+    });
 
     const response = await fetch("https://api.hubapi.com/oauth/v1/token", {
       method: "POST",
@@ -146,7 +115,10 @@ app.get("/oauth/callback", async (req, res) => {
         if (err) {
           console.log("TOKEN SAVE ERROR:", err.message);
         } else {
-          console.log("TOKEN SAVED SUCCESSFULLY");
+          // console.log("TOKEN SAVED SUCCESSFULLY");
+          logInfo("OAuth token saved successfully", {
+            portalId: tokenResponse.hub_id,
+          });
 
           db.all("SELECT * FROM oauth_tokens", [], (err, rows) => {
             console.log(rows);
@@ -162,6 +134,54 @@ app.get("/oauth/callback", async (req, res) => {
     res.status(500).send("OAuth failed");
   }
 });
+
+function logInfo(message, data = {}) {
+  console.log(
+    JSON.stringify({
+      level: "INFO",
+      message,
+      data,
+      timestamp: new Date().toISOString(),
+    }),
+  );
+}
+
+function logError(message, error = {}) {
+  console.error(
+    JSON.stringify({
+      level: "ERROR",
+      message,
+      error: error?.message || error,
+      timestamp: new Date().toISOString(),
+    }),
+  );
+}
+
+function getAverageLatency() {
+  if (metrics.totalCalls === 0) {
+    return 0;
+  }
+
+  return metrics.totalLatency / metrics.totalCalls;
+}
+
+function checkHighErrorRate() {
+  if (metrics.totalCalls < 5) {
+    return;
+  }
+
+  const errorRate = metrics.failureCount / metrics.totalCalls;
+
+  if (errorRate >= ALERT_THRESHOLD) {
+    logError("HIGH ERROR RATE ALERT", {
+      totalCalls: metrics.totalCalls,
+
+      failureCount: metrics.failureCount,
+
+      errorRate: (errorRate * 100).toFixed(2) + "%",
+    });
+  }
+}
 
 app.post("/validate-from-hubspot", (req, res) => {
   console.log("HubSpot Button Clicked ✅");
@@ -190,32 +210,95 @@ function normalizePhone(phone) {
   return phone;
 }
 
-async function validatePhoneWithVeracity(phone, contactId) {
+// async function validatePhoneWithVeracity(phone, contactId, apiKey) {
+//   const normalizedPhone = normalizePhone(phone);
+
+//   const response = await fetch("https://api.veracityhub.io/v2/verify/carrier", {
+//     method: "POST",
+//     headers: {
+//       "Content-Type": "application/json",
+//       // "X-API-TOKEN": process.env.VERACITY_API_KEY,
+//       "X-API-TOKEN": apiKey || process.env.VERACITY_API_KEY,
+//       // "X-API-TOKEN": mappings.veracityApiKey || process.env.VERACITY_API_KEY,
+//     },
+//     body: JSON.stringify({
+//       phone_number: normalizedPhone,
+//       contactId: contactId,
+//     }),
+//   });
+
+//   if (!response.ok) {
+//     throw new Error("Veracity API request failed");
+//   }
+
+//   const data = await response.json();
+
+//   return {
+//     normalizedPhone,
+//     data,
+//   };
+// }
+
+async function validatePhoneWithVeracity(phone, contactId, apiKey) {
   const normalizedPhone = normalizePhone(phone);
 
-  const response = await fetch("https://api.veracityhub.io/v2/verify/carrier", {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      "X-API-TOKEN": process.env.VERACITY_API_KEY,
-      // "X-API-TOKEN": mappings.veracityApiKey || process.env.VERACITY_API_KEY,
-    },
-    body: JSON.stringify({
-      phone_number: normalizedPhone,
-      contactId: contactId,
-    }),
-  });
+  const retryDelays = [1000, 2000, 5000];
 
-  if (!response.ok) {
-    throw new Error("Veracity API request failed");
+  for (let attempt = 0; attempt < 3; attempt++) {
+    try {
+      console.log(`Veracity attempt ${attempt + 1}`);
+
+      const response = await fetch(
+        "https://api.veracityhub.io/v2/verify/carrier",
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "X-API-TOKEN": apiKey || process.env.VERACITY_API_KEY,
+          },
+          body: JSON.stringify({
+            phone_number: normalizedPhone,
+            contactId: contactId,
+          }),
+        },
+      );
+
+      if (!response.ok) {
+        if (response.status >= 500 || response.status === 429) {
+          throw new Error(`Transient API failure: ${response.status}`);
+        }
+
+        throw new Error("Veracity API request failed");
+      }
+
+      const data = await response.json();
+
+      return {
+        normalizedPhone,
+        data,
+      };
+    } catch (error) {
+      console.error(`Retry ${attempt + 1} failed:`, error.message);
+
+      // const classifiedError = classifyVeracityError(error);
+
+      const classifiedError = classifyVeracityError(error, {
+        message: error.message,
+      });
+
+      console.log("Error classification:", classifiedError);
+
+      if (classifiedError.type === "permanent") {
+        throw new Error(classifiedError.userMessage);
+      }
+
+      if (attempt === 2) {
+        throw new Error(classifiedError.userMessage);
+      }
+
+      await wait(retryDelays[attempt]);
+    }
   }
-
-  const data = await response.json();
-
-  return {
-    normalizedPhone,
-    data,
-  };
 }
 
 async function updateHubSpotObject(
@@ -281,6 +364,7 @@ function getMappings(portalId) {
               veracityApiKey: "",
               rateLimitPerHour: 100,
               retentionDays: 30,
+              failureReasonProperty: "veracity_failure_reason",
             },
           );
         }
@@ -342,26 +426,168 @@ async function getAccessToken(portalId) {
 
     return cachedAccessToken;
   } catch (error) {
-    console.error("Token Refresh Error:", error.message);
+    // console.error("Token Refresh Error:", error.message);
+    logError("Token refresh failed", error);
     throw error;
   }
+}
+
+async function checkRateLimit(portalId, limitPerHour) {
+  return new Promise((resolve, reject) => {
+    db.get(
+      `
+      SELECT COUNT(*) as total
+      FROM validation_logs
+      WHERE portalId = ?
+      AND createdAt >= datetime('now', '-1 hour')
+      `,
+      [portalId],
+      (err, row) => {
+        if (err) {
+          reject(err);
+        } else {
+          resolve(row.total < Number(limitPerHour));
+        }
+      },
+    );
+  });
+}
+
+function cleanupOldLogs() {
+  db.all(`SELECT portalId, retentionDays FROM mappings`, [], (err, rows) => {
+    if (err) {
+      console.error("Cleanup fetch failed:", err.message);
+      return;
+    }
+
+    rows.forEach((row) => {
+      db.run(
+        `
+          DELETE FROM validation_logs
+          WHERE portalId = ?
+          AND createdAt < datetime(
+            'now',
+            '-' || ? || ' days'
+          )
+        `,
+        [row.portalId, row.retentionDays],
+        (deleteErr) => {
+          if (deleteErr) {
+            console.error("Cleanup delete failed:", deleteErr.message);
+          } else {
+            console.log(`Old logs cleaned for portal ${row.portalId}`);
+          }
+        },
+      );
+    });
+  });
+}
+
+function createAuditLog(
+  portalId,
+  contactId,
+  action,
+  status,
+  message,
+  carrier = "",
+) {
+  db.run(
+    `
+    INSERT INTO audit_logs (
+      portalId,
+      contactId,
+      action,
+      status,
+      message,
+      carrier
+    )
+    VALUES (?, ?, ?, ?, ?, ?)
+  `,
+    [portalId, contactId, action, status, message, carrier],
+  );
+}
+
+function wait(ms) {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+function classifyVeracityError(error, responseData = {}) {
+  const message = responseData?.message?.toLowerCase() || "";
+
+  if (message.includes("invalid") || message.includes("format")) {
+    return {
+      type: "permanent",
+      userMessage: "Invalid phone number format.",
+    };
+  }
+
+  if (message.includes("blocked")) {
+    return {
+      type: "permanent",
+      userMessage: "Phone number is blocked.",
+    };
+  }
+
+  if (message.includes("unsupported")) {
+    return {
+      type: "permanent",
+      userMessage: "Unsupported phone number country.",
+    };
+  }
+
+  if (
+    error.message.includes("429") ||
+    error.message.includes("500") ||
+    error.message.includes("timeout") ||
+    error.message.includes("Transient")
+  ) {
+    return {
+      type: "transient",
+      userMessage: "Temporary validation issue. Retrying...",
+    };
+  }
+
+  return {
+    type: "unknown",
+    userMessage: "Phone validation failed. Please try again later.",
+  };
 }
 
 // MAIN API
 app.post("/validate-phone", async (req, res) => {
   console.log("===== REQUEST START =====");
 
+  const requestStart = Date.now();
+
+  metrics.totalCalls++;
+
+  let portalId = "";
+  let contactId = "";
+  let objectType = "";
+
   try {
-    console.log("Fetching contact from HubSpot...");
+    // console.log("Fetching contact from HubSpot...");
+    logInfo("Fetching contact from HubSpot", {
+      portalId,
+      contactId,
+    });
 
     console.log("BODY:", req.body);
 
     // ✅ Now using phone_number everywhere
     // const { phone_number, contactId } = req.body;
 
-    const { contactId, objectType } = req.body;
+    // const { contactId, objectType } = req.body;
 
-    const portalId = req.body.portalId;
+    // const portalId = req.body.portalId;
+
+    contactId = req.body.contactId;
+
+    // const { objectType } = req.body;
+
+    objectType = req.body.objectType;
+
+    portalId = req.body.portalId;
 
     if (!contactId) {
       return sendError(res, 400, "contactId is required");
@@ -373,6 +599,15 @@ app.post("/validate-phone", async (req, res) => {
     // const propertyMappings = await getMappings();
     // const propertyMappings = await getMappings(req.body.portalId);
     const propertyMappings = await getMappings(portalId);
+
+    const allowed = await checkRateLimit(
+      portalId,
+      propertyMappings.rateLimitPerHour,
+    );
+
+    if (!allowed) {
+      return sendError(res, 429, "Rate limit exceeded for this portal");
+    }
 
     console.log("Contact ID:", contactId);
 
@@ -412,6 +647,7 @@ app.post("/validate-phone", async (req, res) => {
     const { normalizedPhone, data } = await validatePhoneWithVeracity(
       phone_number,
       contactId,
+      propertyMappings.veracityApiKey,
     );
 
     console.log("Veracity completed");
@@ -439,12 +675,6 @@ app.post("/validate-phone", async (req, res) => {
     });
 
     await updateHubSpotObject(accessToken, hubspotObjectType, contactId, {
-      // veracity_validation_status: data.success ? "valid" : "invalid",
-
-      // veracity_carrier: data.data?.carrier_name || "",
-
-      // veracity_validated_at: new Date().toISOString(),
-
       [propertyMappings.validationStatusProperty]: data.success
         ? "valid"
         : "invalid",
@@ -454,7 +684,28 @@ app.post("/validate-phone", async (req, res) => {
       [propertyMappings.validatedAtProperty]: new Date().toISOString(),
     });
 
+    createAuditLog(
+      portalId,
+      contactId,
+      "validation",
+      "success",
+      "Phone validated successfully",
+      data?.data?.carrier_name || "",
+    );
+
+    db.run(
+      `INSERT INTO validation_logs (portalId)
+      VALUES (?)`,
+      [portalId],
+    );
+
     console.log("===== REQUEST END =====");
+
+    metrics.successCount++;
+
+    metrics.totalLatency += Date.now() - requestStart;
+
+    checkHighErrorRate();
 
     // ✅ Clean response
     return sendSuccess(res, data?.message || "Validation completed", {
@@ -466,9 +717,43 @@ app.post("/validate-phone", async (req, res) => {
       request_id: data?.request_id || "",
     });
   } catch (error) {
-    console.error("Error:", error.message);
+    // console.error("Error:", error.message);
+
+    metrics.failureCount++;
+
+    metrics.totalLatency += Date.now() - requestStart;
+
+    checkHighErrorRate();
+
+    logError("Validation request failed", error);
 
     console.error("FULL ERROR:", error);
+
+    try {
+      const accessToken = await getAccessToken(portalId);
+
+      const propertyMappings = await getMappings(portalId);
+
+      await updateHubSpotObject(
+        accessToken,
+        objectType === "companies" ? "companies" : "contacts",
+        contactId,
+        {
+          [propertyMappings.failureReasonProperty]: error.message,
+        },
+      );
+    } catch (hubspotError) {
+      console.error("Failed to save failure reason:", hubspotError.message);
+    }
+
+    createAuditLog(
+      portalId,
+      contactId || "",
+      "validation",
+      "failed",
+      error.message,
+      "",
+    );
 
     return sendError(res, 500, "Something went wrong");
   }
@@ -538,6 +823,16 @@ app.post("/bulk-validate", async (req, res) => {
     batchJob.status = "running";
 
     for (const member of listData.results) {
+      const allowed = await checkRateLimit(
+        portalId,
+        propertyMappings.rateLimitPerHour,
+      );
+
+      if (!allowed) {
+        console.log("Bulk rate limit exceeded");
+
+        break;
+      }
       try {
         const contactId = member.recordId;
 
@@ -569,7 +864,11 @@ app.post("/bulk-validate", async (req, res) => {
         }
 
         const { normalizedPhone, data: veracityData } =
-          await validatePhoneWithVeracity(phone, contactId);
+          await validatePhoneWithVeracity(
+            phone,
+            contactId,
+            propertyMappings.veracityApiKey,
+          );
 
         console.log(
           `Validation completed for ${contactId} - ${
@@ -596,6 +895,12 @@ app.post("/bulk-validate", async (req, res) => {
 
           bulk_validated_at: new Date().toISOString(),
         });
+
+        db.run(
+          `INSERT INTO validation_logs (portalId)
+          VALUES (?)`,
+          [portalId],
+        );
 
         // COUNTERS
         batchJob.processed++;
@@ -630,23 +935,12 @@ app.post("/bulk-validate", async (req, res) => {
       },
     });
   } catch (error) {
-    console.error("Bulk validation error:", error.message);
+    // console.error("Bulk validation error:", error.message);
+    logError("Bulk validation failed", error);
 
     return sendError(res, 500, "Bulk validation failed");
   }
 });
-
-// app.get("/settings", async (req, res) => {
-//   try {
-//     return sendSuccess(res, "Settings fetched successfully", {
-//       mappings: propertyMappings,
-//     });
-//   } catch (error) {
-//     console.error("Settings fetch error:", error.message);
-
-//     return sendError(res, 500, "Unable to fetch settings");
-//   }
-// });
 
 app.get("/settings", async (req, res) => {
   try {
@@ -671,6 +965,7 @@ app.get("/settings", async (req, res) => {
               veracityApiKey: "",
               rateLimitPerHour: 100,
               retentionDays: 30,
+              failureReasonProperty: "veracity_failure_reason",
             },
           });
         }
@@ -687,39 +982,6 @@ app.get("/settings", async (req, res) => {
   }
 });
 
-// app.post("/settings", async (req, res) => {
-//   try {
-//     const {
-//       phoneProperty,
-//       validationStatusProperty,
-//       carrierProperty,
-//       validatedAtProperty,
-//     } = req.body;
-
-//     propertyMappings = {
-//       phoneProperty: phoneProperty || propertyMappings.phoneProperty,
-
-//       validationStatusProperty:
-//         validationStatusProperty || propertyMappings.validationStatusProperty,
-
-//       carrierProperty: carrierProperty || propertyMappings.carrierProperty,
-
-//       validatedAtProperty:
-//         validatedAtProperty || propertyMappings.validatedAtProperty,
-//     };
-
-//     console.log("UPDATED MAPPINGS:", propertyMappings);
-
-//     return sendSuccess(res, "Settings updated successfully", {
-//       mappings: propertyMappings,
-//     });
-//   } catch (error) {
-//     console.error("Settings update error:", error.message);
-
-//     return sendError(res, 500, "Unable to update settings");
-//   }
-// });
-
 app.post("/settings", async (req, res) => {
   console.log(req.body);
   try {
@@ -732,6 +994,7 @@ app.post("/settings", async (req, res) => {
       veracityApiKey,
       rateLimitPerHour,
       retentionDays,
+      failureReasonProperty,
     } = req.body;
 
     db.run(
@@ -744,9 +1007,10 @@ app.post("/settings", async (req, res) => {
         validatedAtProperty,
         veracityApiKey,
         rateLimitPerHour,
-        retentionDays
+        retentionDays,
+        failureReasonProperty
       )
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
 
       ON CONFLICT(portalId)
       DO UPDATE SET
@@ -761,7 +1025,9 @@ app.post("/settings", async (req, res) => {
           rateLimitPerHour =
           excluded.rateLimitPerHour,
           retentionDays =
-          excluded.retentionDays
+          excluded.retentionDays,
+          failureReasonProperty =
+          excluded.failureReasonProperty
       `,
       [
         // "default",
@@ -773,6 +1039,7 @@ app.post("/settings", async (req, res) => {
         veracityApiKey,
         rateLimitPerHour,
         retentionDays,
+        failureReasonProperty,
       ],
       function (err) {
         if (err) {
@@ -840,6 +1107,35 @@ app.get("/hubspot-lists", async (req, res) => {
   }
 });
 
-app.listen(PORT, () => {
-  console.log(`Server running on http://localhost:${PORT}`);
+app.get("/metrics", (req, res) => {
+  res.json({
+    totalCalls: metrics.totalCalls,
+
+    successCount: metrics.successCount,
+
+    failureCount: metrics.failureCount,
+
+    averageLatency: getAverageLatency(),
+  });
 });
+
+if (process.env.NODE_ENV !== "test") {
+  cleanupOldLogs();
+
+  setInterval(
+    () => {
+      console.log("Running scheduled cleanup...");
+
+      cleanupOldLogs();
+    },
+    60 * 60 * 1000,
+  );
+}
+
+if (process.env.NODE_ENV !== "test") {
+  app.listen(PORT, () => {
+    console.log(`Server running on http://localhost:${PORT}`);
+  });
+}
+
+module.exports = { app, normalizePhone };

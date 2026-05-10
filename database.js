@@ -2,14 +2,12 @@ const sqlite3 = require("sqlite3").verbose();
 const path = require("path");
 
 const db = new sqlite3.Database(path.join(__dirname, "settings.db"), (err) => {
-  console.log(__dirname);
-
-  console.log(process.cwd());
-
-  if (err) {
-    console.error("Database connection error:", err.message);
-  } else {
-    console.log("Connected to SQLite database");
+  if (process.env.NODE_ENV !== "test") {
+    if (err) {
+      console.error("Database connection error:", err.message);
+    } else {
+      console.log("Connected to SQLite database");
+    }
   }
 });
 
@@ -42,6 +40,27 @@ db.serialize(() => {
     refreshToken TEXT,
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
     expiresAt TEXT
+  )
+`);
+
+  db.run(`
+  CREATE TABLE IF NOT EXISTS validation_logs (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    portalId TEXT,
+    createdAt DATETIME DEFAULT CURRENT_TIMESTAMP
+  )
+`);
+
+  db.run(`
+  CREATE TABLE IF NOT EXISTS audit_logs (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    portalId TEXT,
+    contactId TEXT,
+    action TEXT,
+    status TEXT,
+    message TEXT,
+    carrier TEXT,
+    createdAt DATETIME DEFAULT CURRENT_TIMESTAMP
   )
 `);
 });
