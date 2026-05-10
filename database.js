@@ -26,9 +26,11 @@ db.serialize(() => {
   `);
   db.run(`
   CREATE TABLE IF NOT EXISTS oauth_tokens (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
     portalId TEXT PRIMARY KEY,
     accessToken TEXT,
     refreshToken TEXT,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
     expiresAt TEXT
   )
 `);

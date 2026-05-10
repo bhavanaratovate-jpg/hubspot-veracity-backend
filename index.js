@@ -131,7 +131,29 @@ app.get("/oauth/callback", async (req, res) => {
 
     console.log("TOKEN RESPONSE:", tokenResponse);
 
-    console.log("TOKEN RESPONSE:", tokenResponse.data);
+    db.run(
+      `
+  INSERT OR REPLACE INTO oauth_tokens
+  (portalId, accessToken, refreshToken)
+  VALUES (?, ?, ?)
+`,
+      [
+        tokenResponse.hub_id,
+        tokenResponse.access_token,
+        tokenResponse.refresh_token,
+      ],
+      (err) => {
+        if (err) {
+          console.log("TOKEN SAVE ERROR:", err.message);
+        } else {
+          console.log("TOKEN SAVED SUCCESSFULLY");
+
+          db.all("SELECT * FROM oauth_tokens", [], (err, rows) => {
+            console.log(rows);
+          });
+        }
+      },
+    );
 
     res.send("OAuth token generated successfully");
   } catch (error) {
@@ -263,7 +285,7 @@ function getMappings(portalId) {
   });
 }
 
-async function getAccessToken() {
+async function getAccessToken(portalId) {
   try {
     // ✅ token still valid
     if (cachedAccessToken && tokenExpiryTime && Date.now() < tokenExpiryTime) {
@@ -272,6 +294,24 @@ async function getAccessToken() {
     }
 
     console.log("Generating new access token");
+
+    const tokenData = await new Promise((resolve, reject) => {
+      db.get(
+        `SELECT * FROM oauth_tokens WHERE portalId = ?`,
+        [portalId],
+        (err, row) => {
+          if (err) {
+            reject(err);
+          } else {
+            resolve(row);
+          }
+        },
+      );
+    });
+
+    if (!tokenData) {
+      throw new Error("No OAuth token found for portal");
+    }
 
     const response = await fetch("https://api.hubapi.com/oauth/v1/token", {
       method: "POST",
@@ -282,7 +322,8 @@ async function getAccessToken() {
         grant_type: "refresh_token",
         client_id: process.env.HUBSPOT_CLIENT_ID,
         client_secret: process.env.HUBSPOT_CLIENT_SECRET,
-        refresh_token: process.env.HUBSPOT_REFRESH_TOKEN,
+        // refresh_token: process.env.HUBSPOT_REFRESH_TOKEN,
+        refresh_token: tokenData.refreshToken,
       }),
     });
 
@@ -334,7 +375,7 @@ app.post("/validate-phone", async (req, res) => {
     console.log("Fetching contact from HubSpot...");
 
     // 🔥 HubSpot से phone fetch करो
-    const accessToken = await getAccessToken();
+    const accessToken = await getAccessToken(portalId);
 
     const contactRes = await fetch(
       // `https://api.hubapi.com/crm/v3/objects/contacts/${contactId}?properties=phone`,
@@ -434,11 +475,12 @@ app.post("/bulk-validate", async (req, res) => {
   // const propertyMappings = await getMappings();
   // const propertyMappings = await getMappings(req.body.portalId);
 
-  const propertyMappings = await getMappings(portalId);
   try {
     // const { listId } = req.body;
 
     const { listId, portalId } = req.body;
+
+    const propertyMappings = await getMappings(portalId);
 
     if (!listId) {
       return sendError(res, 400, "listId is required");
@@ -460,7 +502,7 @@ app.post("/bulk-validate", async (req, res) => {
 
     console.log("Batch Job Created:", batchJob);
 
-    const accessToken = await getAccessToken();
+    const accessToken = await getAccessToken(portalId);
 
     console.log("Fetching list members from HubSpot...");
 
@@ -735,7 +777,9 @@ app.get("/hubspot-lists", async (req, res) => {
   try {
     console.log("Fetching HubSpot lists...");
 
-    const accessToken = await getAccessToken();
+    const portalId = req.query.portalId;
+
+    const accessToken = await getAccessToken(portalId);
 
     const response = await fetch("https://api.hubapi.com/contacts/v1/lists", {
       method: "GET",
