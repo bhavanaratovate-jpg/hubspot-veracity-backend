@@ -278,6 +278,9 @@ function getMappings(portalId) {
               validationStatusProperty: "veracity_validation_status",
               carrierProperty: "veracity_carrier",
               validatedAtProperty: "veracity_validated_at",
+              veracityApiKey: "",
+              rateLimitPerHour: 100,
+              retentionDays: 30,
             },
           );
         }
@@ -665,6 +668,9 @@ app.get("/settings", async (req, res) => {
               validationStatusProperty: "veracity_validation_status",
               carrierProperty: "veracity_carrier",
               validatedAtProperty: "veracity_validated_at",
+              veracityApiKey: "",
+              rateLimitPerHour: 100,
+              retentionDays: 30,
             },
           });
         }
