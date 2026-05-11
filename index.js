@@ -48,12 +48,22 @@ const requiredEnvVars = [
   "HUBSPOT_REDIRECT_URI",
 ];
 
-requiredEnvVars.forEach((key) => {
-  if (!process.env[key]) {
-    console.error(`Missing environment variable: ${key}`);
-    process.exit(1);
-  }
-});
+// requiredEnvVars.forEach((key) => {
+//   if (!process.env[key]) {
+//     console.error(`Missing environment variable: ${key}`);
+//     process.exit(1);
+//   }
+// });
+
+if (process.env.NODE_ENV !== "test") {
+  requiredEnvVars.forEach((key) => {
+    if (!process.env[key]) {
+      console.error(`Missing environment variable: ${key}`);
+
+      process.exit(1);
+    }
+  });
+}
 
 const app = express();
 
@@ -88,7 +98,7 @@ app.get("/install", (req, res) => {
   const installUrl =
     `https://app.hubspot.com/oauth/authorize` +
     `?client_id=${process.env.HUBSPOT_CLIENT_ID}` +
-    `&scope=crm.objects.contacts.read crm.objects.contacts.write crm.lists.read` +
+    `&scope=crm.objects.contacts.read crm.objects.contacts.write crm.objects.companies.read crm.objects.companies.write crm.lists.read` +
     `&redirect_uri=${process.env.HUBSPOT_REDIRECT_URI}`;
 
   res.redirect(installUrl);
