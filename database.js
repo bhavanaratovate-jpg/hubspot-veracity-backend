@@ -23,7 +23,9 @@ db.serialize(() => {
     veracityApiKey TEXT,
     rateLimitPerHour INTEGER DEFAULT 100,
     retentionDays INTEGER DEFAULT 30,
-    overwriteExisting INTEGER DEFAULT 1
+    overwriteExisting INTEGER DEFAULT 1,
+    maxRequestsPerSecond INTEGER DEFAULT 10,
+    maxConcurrentWorkers INTEGER DEFAULT 1
   )
   `);
 
@@ -36,7 +38,7 @@ db.serialize(() => {
   db.run(`
   CREATE TABLE IF NOT EXISTS oauth_tokens (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
-    portalId TEXT PRIMARY KEY,
+    portalId TEXT UNIQUE,
     accessToken TEXT,
     refreshToken TEXT,
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
