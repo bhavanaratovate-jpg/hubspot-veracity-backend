@@ -22,7 +22,8 @@ db.serialize(() => {
     validatedAtProperty TEXT,
     veracityApiKey TEXT,
     rateLimitPerHour INTEGER DEFAULT 100,
-    retentionDays INTEGER DEFAULT 30
+    retentionDays INTEGER DEFAULT 30,
+    overwriteExisting INTEGER DEFAULT 1
   )
   `);
 
@@ -63,6 +64,21 @@ db.serialize(() => {
     createdAt DATETIME DEFAULT CURRENT_TIMESTAMP
   )
 `);
+
+  db.run(`
+    CREATE TABLE IF NOT EXISTS batch_jobs (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    portalId TEXT,
+    listId TEXT,
+    status TEXT,
+    total INTEGER DEFAULT 0,
+    processed INTEGER DEFAULT 0,
+    valid INTEGER DEFAULT 0,
+    invalid INTEGER DEFAULT 0,
+    failed INTEGER DEFAULT 0,
+    createdAt DATETIME DEFAULT CURRENT_TIMESTAMP
+    )
+    `);
 });
 
 module.exports = db;

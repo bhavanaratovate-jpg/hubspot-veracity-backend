@@ -4,6 +4,30 @@ const cors = require("cors");
 const db = require("./database");
 require("dotenv").config();
 
+function validatePortalAccess(req, res, next) {
+  const portalId = req.body.portalId || req.query.portalId;
+
+  if (!portalId) {
+    return sendError(res, 400, "portalId is required");
+  }
+
+  db.get(
+    `
+    SELECT *
+    FROM oauth_tokens
+    WHERE portalId = ?
+  `,
+    [portalId],
+    (err, row) => {
+      if (err || !row) {
+        return sendError(res, 403, "Unauthorized portal");
+      }
+
+      next();
+    },
+  );
+}
+
 const metrics = {
   totalCalls: 0,
 
@@ -48,6 +72,8 @@ let propertyMappings = {
   validatedAtProperty: "veracity_validated_at",
 
   failureReasonProperty: "veracity_failure_reason",
+
+  overwriteExisting: true,
 };
 
 let cachedAccessToken = null;
@@ -209,35 +235,6 @@ function normalizePhone(phone) {
 
   return phone;
 }
-
-// async function validatePhoneWithVeracity(phone, contactId, apiKey) {
-//   const normalizedPhone = normalizePhone(phone);
-
-//   const response = await fetch("https://api.veracityhub.io/v2/verify/carrier", {
-//     method: "POST",
-//     headers: {
-//       "Content-Type": "application/json",
-//       // "X-API-TOKEN": process.env.VERACITY_API_KEY,
-//       "X-API-TOKEN": apiKey || process.env.VERACITY_API_KEY,
-//       // "X-API-TOKEN": mappings.veracityApiKey || process.env.VERACITY_API_KEY,
-//     },
-//     body: JSON.stringify({
-//       phone_number: normalizedPhone,
-//       contactId: contactId,
-//     }),
-//   });
-
-//   if (!response.ok) {
-//     throw new Error("Veracity API request failed");
-//   }
-
-//   const data = await response.json();
-
-//   return {
-//     normalizedPhone,
-//     data,
-//   };
-// }
 
 async function validatePhoneWithVeracity(phone, contactId, apiKey) {
   const normalizedPhone = normalizePhone(phone);
@@ -559,6 +556,8 @@ app.post("/validate-phone", async (req, res) => {
 
   const requestStart = Date.now();
 
+  const requestId = Date.now().toString();
+
   metrics.totalCalls++;
 
   let portalId = "";
@@ -638,6 +637,13 @@ app.post("/validate-phone", async (req, res) => {
 
     console.log("Fetched Phone:", phone_number);
 
+    logInfo("Validation request started", {
+      requestId,
+      portalId,
+      contactId,
+      phone: phone_number,
+    });
+
     if (!phone_number) {
       return sendError(res, 400, "Phone not found in HubSpot");
     }
@@ -674,6 +680,15 @@ app.post("/validate-phone", async (req, res) => {
       [propertyMappings.validatedAtProperty]: new Date().toISOString(),
     });
 
+    if (!propertyMappings.overwriteExisting) {
+      const alreadyValidated =
+        contactData?.properties?.[propertyMappings.validationStatusProperty];
+
+      if (alreadyValidated) {
+        return sendError(res, 400, "Validation already exists");
+      }
+    }
+
     await updateHubSpotObject(accessToken, hubspotObjectType, contactId, {
       [propertyMappings.validationStatusProperty]: data.success
         ? "valid"
@@ -707,6 +722,13 @@ app.post("/validate-phone", async (req, res) => {
 
     checkHighErrorRate();
 
+    logInfo("Validation success", {
+      requestId,
+      portalId,
+      contactId,
+      status: "success",
+    });
+
     // ✅ Clean response
     return sendSuccess(res, data?.message || "Validation completed", {
       normalized_phone: normalizedPhone,
@@ -726,6 +748,14 @@ app.post("/validate-phone", async (req, res) => {
     checkHighErrorRate();
 
     logError("Validation request failed", error);
+
+    logError("Validation failed", {
+      requestId,
+      portalId,
+      contactId,
+      status: "failed",
+      error: error.message,
+    });
 
     console.error("FULL ERROR:", error);
 
@@ -766,6 +796,8 @@ app.post("/bulk-validate", async (req, res) => {
 
   try {
     // const { listId } = req.body;
+
+    const batchJobId = Date.now();
 
     const { listId, portalId } = req.body;
 
@@ -822,6 +854,19 @@ app.post("/bulk-validate", async (req, res) => {
 
     batchJob.status = "running";
 
+    db.run(
+      `INSERT INTO batch_jobs (
+          id,
+          portalId,
+          listId,
+          status,
+          total
+          )
+          VALUES (?, ?, ?, ?, ?)
+          `,
+      [batchJobId, portalId, listId, "running", batchJob.total],
+    );
+
     for (const member of listData.results) {
       const allowed = await checkRateLimit(
         portalId,
@@ -837,6 +882,8 @@ app.post("/bulk-validate", async (req, res) => {
         const contactId = member.recordId;
 
         console.log("Processing Contact:", contactId);
+
+        const total = listData?.results?.length || 0;
 
         // FETCH CONTACT
         const contactResponse = await fetch(
@@ -911,6 +958,24 @@ app.post("/bulk-validate", async (req, res) => {
           batchJob.invalid++;
         }
 
+        db.run(
+          `UPDATE batch_jobs
+          SET
+          processed = ?,
+          valid = ?,
+          invalid = ?,
+          failed = ?
+          WHERE id = ?
+          `,
+          [
+            batchJob.processed,
+            batchJob.valid,
+            batchJob.invalid,
+            batchJob.failed,
+            batchJobId,
+          ],
+        );
+
         await new Promise((resolve) => setTimeout(resolve, 500));
       } catch (error) {
         console.error(
@@ -923,6 +988,14 @@ app.post("/bulk-validate", async (req, res) => {
     }
 
     batchJob.status = "completed";
+
+    db.run(
+      `UPDATE batch_jobs
+      SET status = ?
+      WHERE id = ?
+      `,
+      ["completed", batchJobId],
+    );
 
     return sendSuccess(res, "Bulk validation completed successfully", {
       summary: {
@@ -942,7 +1015,7 @@ app.post("/bulk-validate", async (req, res) => {
   }
 });
 
-app.get("/settings", async (req, res) => {
+app.get("/settings", validatePortalAccess, async (req, res) => {
   try {
     db.get(
       `SELECT * FROM mappings WHERE portalId = ?`,
@@ -982,7 +1055,7 @@ app.get("/settings", async (req, res) => {
   }
 });
 
-app.post("/settings", async (req, res) => {
+app.post("/settings", validatePortalAccess, async (req, res) => {
   console.log(req.body);
   try {
     const {
@@ -1105,6 +1178,24 @@ app.get("/hubspot-lists", async (req, res) => {
 
     return sendError(res, 500, "Unable to fetch lists");
   }
+});
+
+app.get("/batch-job/:id", (req, res) => {
+  db.get(
+    `
+    SELECT *
+    FROM batch_jobs
+    WHERE id = ?
+  `,
+    [req.params.id],
+    (err, row) => {
+      if (err) {
+        return sendError(res, 500, "Failed to fetch batch job");
+      }
+
+      return sendSuccess(res, "Batch job fetched", row);
+    },
+  );
 });
 
 app.get("/metrics", (req, res) => {
