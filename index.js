@@ -1195,7 +1195,8 @@ app.post("/bulk-validate", async (req, res) => {
     console.log("Fetching list members from HubSpot...");
 
     const listResponse = await fetch(
-      `https://api.hubapi.com/crm/v3/lists/${listId}/memberships/join-order`,
+      // `https://api.hubapi.com/crm/v3/lists/${listId}/memberships/join-order`,
+      `https://api.hubapi.com/contacts/v1/lists/${listId}/contacts/all`,
       {
         method: "GET",
         headers: {
