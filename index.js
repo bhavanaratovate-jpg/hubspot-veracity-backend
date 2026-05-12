@@ -1659,10 +1659,28 @@ app.get("/hubspot-lists", async (req, res) => {
     //   value: String(list.dynamic ? list.portalId : list.listId),
     // }));
 
-    const formattedLists = (data.lists || []).map((list) => ({
-      label: `${list.name} (${list.metaData?.size || 0})`,
-      value: String(list.listId),
-    }));
+    // const formattedLists = (data.lists || []).map((list) => ({
+    //   label: `${list.name} (${list.metaData?.size || 0})`,
+    //   value: String(list.listId),
+    // }));
+
+    // const formattedLists = response.results.map((list) => ({
+    //   label: `${list.name} (${list.metaData.size})`,
+    //   value: list.listId,
+    // }));
+
+    const formattedLists = response.results.map((list) => {
+      console.log("LIST IDS:", {
+        listId: list.listId,
+        objectId: list.objectId,
+        id: list.id,
+      });
+
+      return {
+        label: `${list.name} (${list.metaData.size})`,
+        value: String(list.listId),
+      };
+    });
 
     console.log("FULL HUBSPOT LIST:", list);
 
