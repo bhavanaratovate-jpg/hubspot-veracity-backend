@@ -1450,12 +1450,12 @@ app.get("/settings", validatePortalAccess, async (req, res) => {
               validationStatusProperty: "veracity_validation_status",
               carrierProperty: "veracity_carrier",
               validatedAtProperty: "veracity_validated_at",
+              overwriteExisting: !!row.overwriteExisting,
               veracityApiKey: "",
               rateLimitPerHour: 100,
               retentionDays: 30,
               failureReasonProperty: "veracity_failure_reason",
               normalizedPhoneProperty: "veracity_normalized_phone",
-
               storeNormalizedPhone: false,
             },
           });
@@ -1488,6 +1488,7 @@ app.post("/settings", validatePortalAccess, async (req, res) => {
       validationStatusProperty,
       carrierProperty,
       validatedAtProperty,
+      overwriteExisting,
       veracityApiKey,
       rateLimitPerHour,
       retentionDays,
@@ -1506,6 +1507,7 @@ app.post("/settings", validatePortalAccess, async (req, res) => {
         validationStatusProperty,
         carrierProperty,
         validatedAtProperty,
+        overwriteExisting,
         veracityApiKey,
         rateLimitPerHour,
         retentionDays,
@@ -1525,6 +1527,7 @@ app.post("/settings", validatePortalAccess, async (req, res) => {
         carrierProperty = excluded.carrierProperty,
         validatedAtProperty =
           excluded.validatedAtProperty,
+          overwriteExisting = ?,
           veracityApiKey =
           excluded.veracityApiKey,
           rateLimitPerHour =
@@ -1549,6 +1552,7 @@ app.post("/settings", validatePortalAccess, async (req, res) => {
         validationStatusProperty,
         carrierProperty,
         validatedAtProperty,
+        overwriteExisting ? 1 : 0,
         // veracityApiKey,
         encrypt(veracityApiKey),
         rateLimitPerHour,
