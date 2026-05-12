@@ -25,7 +25,10 @@ db.serialize(() => {
     retentionDays INTEGER DEFAULT 30,
     overwriteExisting INTEGER DEFAULT 1,
     maxRequestsPerSecond INTEGER DEFAULT 10,
-    maxConcurrentWorkers INTEGER DEFAULT 1
+    maxConcurrentWorkers INTEGER DEFAULT 1,
+    failureReasonProperty TEXT,
+    normalizedPhoneProperty TEXT,
+    storeNormalizedPhone INTEGER
   )
   `);
 
