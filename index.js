@@ -1625,51 +1625,12 @@ app.get("/hubspot-lists", async (req, res) => {
 
     console.log("HubSpot lists fetched successfully");
 
-    // const formattedLists = (data.lists || []).map((list) => ({
-    //   label: `${list.name} (${list.metaData?.size || 0})`,
-    //   value: String(list.id || list.listId),
-    // }));
-
-    // const formattedLists = allLists.map((list) => ({
-    //   label: `${list.name} (${list.processingStatus || 0})`,
-    //   value: String(list.id || list.listId),
-    // }));
-
-    // const formattedLists = (data.lists || []).map((list) => ({
-    //   label: `${list.name} (${list.metaData?.size || 0})`,
-    //   value: String(list.listId),
-    // }));
-
     console.log("FULL LIST OBJECT:", data.lists[0]);
 
-    // const formattedLists = (data.lists || []).map((list) => ({
-    //   label: `${list.name} (${list.metaData?.size || 0})`,
-    //   value: String(
-    //     list.ilsFilterBranch?.filterBranchOperator || list.listId || list.id,
-    //   ),
-    // }));
 
-    // const formattedLists = (data.lists || []).map((list) => ({
-    //   label: `${list.name} (${list.metaData?.size || 0})`,
-    //   value: String(list.dynamic ? list.listId : list.id),
-    // }));
+    const lists = response.lists || response.results || [];
 
-    // const formattedLists = (data.lists || []).map((list) => ({
-    //   label: `${list.name} (${list.metaData?.size || 0})`,
-    //   value: String(list.dynamic ? list.portalId : list.listId),
-    // }));
-
-    // const formattedLists = (data.lists || []).map((list) => ({
-    //   label: `${list.name} (${list.metaData?.size || 0})`,
-    //   value: String(list.listId),
-    // }));
-
-    // const formattedLists = response.results.map((list) => ({
-    //   label: `${list.name} (${list.metaData.size})`,
-    //   value: list.listId,
-    // }));
-
-    const formattedLists = response.results.map((list) => {
+    const formattedLists = lists.map((list) => {
       console.log("LIST IDS:", {
         listId: list.listId,
         objectId: list.objectId,
@@ -1677,7 +1638,7 @@ app.get("/hubspot-lists", async (req, res) => {
       });
 
       return {
-        label: `${list.name} (${list.metaData.size})`,
+        label: `${list.name} (${list.metaData?.size || 0})`,
         value: String(list.listId),
       };
     });
