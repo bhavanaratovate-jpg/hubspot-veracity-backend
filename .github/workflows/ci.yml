@@ -26,6 +26,6 @@ jobs:
         run: npm install
 
       - name: Run tests
-        run: npm test
         env:
-    ENCRYPTION_KEY: ${{ secrets.ENCRYPTION_KEY }}
+          ENCRYPTION_KEY: ${{ secrets.ENCRYPTION_KEY }}
+        run: npm test
