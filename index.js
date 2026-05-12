@@ -1594,7 +1594,6 @@ app.get("/hubspot-lists", async (req, res) => {
 
     const response = await fetch(
       "https://api.hubapi.com/contacts/v1/lists",
-      "https://api.hubapi.com/companies/v1/lists",
       {
         method: "GET",
         headers: {
