@@ -1351,7 +1351,7 @@ app.post("/bulk-validate", async (req, res) => {
             await updateHubSpotObject(
               accessToken,
               "contacts",
-              contactId,
+              record.id,
               hubspotProperties,
             );
 
@@ -1391,7 +1391,7 @@ app.post("/bulk-validate", async (req, res) => {
             await new Promise((resolve) => setTimeout(resolve, 500));
           } catch (error) {
             console.error(
-              `Validation failed for contact ${contactId}:`,
+              `Validation failed for contact ${record.id}:`,
               error.message,
             );
 
