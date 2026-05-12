@@ -29,9 +29,16 @@ function validatePortalAccess(req, res, next) {
   );
 }
 
+// const ENCRYPTION_KEY = crypto
+//   .createHash("sha256")
+//   .update(process.env.ENCRYPTION_KEY)
+//   .digest();
+
+const encryptionSecret = process.env.ENCRYPTION_KEY || "test-encryption-key";
+
 const ENCRYPTION_KEY = crypto
   .createHash("sha256")
-  .update(process.env.ENCRYPTION_KEY)
+  .update(encryptionSecret)
   .digest();
 
 function encrypt(text) {
@@ -1332,7 +1339,6 @@ app.post("/bulk-validate", async (req, res) => {
 
               bulk_validated_at: new Date().toISOString(),
             };
-
 
             if (
               propertyMappings.storeNormalizedPhone &&
