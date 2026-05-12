@@ -1195,8 +1195,8 @@ app.post("/bulk-validate", async (req, res) => {
     console.log("Fetching list members from HubSpot...");
 
     const listResponse = await fetch(
-      // `https://api.hubapi.com/crm/v3/lists/${listId}/memberships/join-order`,
-      `https://api.hubapi.com/contacts/v1/lists/${listId}/contacts/all`,
+      `https://api.hubapi.com/crm/v3/lists/${listId}/memberships/join-order`,
+      // `https://api.hubapi.com/contacts/v1/lists/${listId}/contacts/all`,
       {
         method: "GET",
         headers: {
@@ -1649,9 +1649,19 @@ app.get("/hubspot-lists", async (req, res) => {
     //   ),
     // }));
 
+    // const formattedLists = (data.lists || []).map((list) => ({
+    //   label: `${list.name} (${list.metaData?.size || 0})`,
+    //   value: String(list.dynamic ? list.listId : list.id),
+    // }));
+
+    // const formattedLists = (data.lists || []).map((list) => ({
+    //   label: `${list.name} (${list.metaData?.size || 0})`,
+    //   value: String(list.dynamic ? list.portalId : list.listId),
+    // }));
+
     const formattedLists = (data.lists || []).map((list) => ({
       label: `${list.name} (${list.metaData?.size || 0})`,
-      value: String(list.dynamic ? list.listId : list.id),
+      value: String(list.listId),
     }));
 
     console.log("FULL HUBSPOT LIST:", list);
