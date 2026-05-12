@@ -1351,7 +1351,7 @@ app.post("/bulk-validate", async (req, res) => {
             await updateHubSpotObject(
               accessToken,
               "contacts",
-              record.id,
+              contactId,
               hubspotProperties,
             );
 
@@ -1391,7 +1391,7 @@ app.post("/bulk-validate", async (req, res) => {
             await new Promise((resolve) => setTimeout(resolve, 500));
           } catch (error) {
             console.error(
-              `Validation failed for contact ${record.id}:`,
+              `Validation failed for contact ${contactId}:`,
               error.message,
             );
 
@@ -1592,16 +1592,13 @@ app.get("/hubspot-lists", async (req, res) => {
 
     const accessToken = await getAccessToken(portalId);
 
-    const response = await fetch(
-      "https://api.hubapi.com/contacts/v1/lists",
-      {
-        method: "GET",
-        headers: {
-          Authorization: `Bearer ${accessToken}`,
-          "Content-Type": "application/json",
-        },
+    const response = await fetch("https://api.hubapi.com/contacts/v1/lists", {
+      method: "GET",
+      headers: {
+        Authorization: `Bearer ${accessToken}`,
+        "Content-Type": "application/json",
       },
-    );
+    });
 
     if (!response.ok) {
       const errorText = await response.text();
@@ -1622,9 +1619,14 @@ app.get("/hubspot-lists", async (req, res) => {
     //   value: String(list.id || list.listId),
     // }));
 
-    const formattedLists = allLists.map((list) => ({
-      label: `${list.name} (${list.processingStatus || 0})`,
-      value: String(list.id || list.listId),
+    // const formattedLists = allLists.map((list) => ({
+    //   label: `${list.name} (${list.processingStatus || 0})`,
+    //   value: String(list.id || list.listId),
+    // }));
+
+    const formattedLists = (data.lists || []).map((list) => ({
+      label: `${list.name} (${list.metaData?.size || 0})`,
+      value: String(list.listId),
     }));
 
     console.log("FORMATTED LISTS:", formattedLists);
