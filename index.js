@@ -1450,7 +1450,7 @@ app.get("/settings", validatePortalAccess, async (req, res) => {
               validationStatusProperty: "veracity_validation_status",
               carrierProperty: "veracity_carrier",
               validatedAtProperty: "veracity_validated_at",
-              overwriteExisting: !!row.overwriteExisting,
+              overwriteExisting: true,
               veracityApiKey: "",
               rateLimitPerHour: 100,
               retentionDays: 30,
