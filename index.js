@@ -1643,8 +1643,6 @@ app.get("/hubspot-lists", async (req, res) => {
       };
     });
 
-    console.log("FULL HUBSPOT LIST:", list);
-
     console.log("FORMATTED LISTS:", formattedLists);
 
     return sendSuccess(res, "Lists fetched successfully", {
