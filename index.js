@@ -1592,13 +1592,17 @@ app.get("/hubspot-lists", async (req, res) => {
 
     const accessToken = await getAccessToken(portalId);
 
-    const response = await fetch("https://api.hubapi.com/contacts/v1/lists", {
-      method: "GET",
-      headers: {
-        Authorization: `Bearer ${accessToken}`,
-        "Content-Type": "application/json",
+    const response = await fetch(
+      "https://api.hubapi.com/contacts/v1/lists",
+      "https://api.hubapi.com/companies/v1/lists",
+      {
+        method: "GET",
+        headers: {
+          Authorization: `Bearer ${accessToken}`,
+          "Content-Type": "application/json",
+        },
       },
-    });
+    );
 
     if (!response.ok) {
       const errorText = await response.text();
@@ -1614,9 +1618,14 @@ app.get("/hubspot-lists", async (req, res) => {
 
     console.log("HubSpot lists fetched successfully");
 
-    const formattedLists = (data.lists || []).map((list) => ({
-      label: `${list.name} (${list.metaData?.size || 0})`,
-      value: String(list.listId),
+    // const formattedLists = (data.lists || []).map((list) => ({
+    //   label: `${list.name} (${list.metaData?.size || 0})`,
+    //   value: String(list.id || list.listId),
+    // }));
+
+    const formattedLists = allLists.map((list) => ({
+      label: `${list.name} (${list.processingStatus || 0})`,
+      value: String(list.id || list.listId),
     }));
 
     console.log("FORMATTED LISTS:", formattedLists);
