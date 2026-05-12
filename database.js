@@ -32,11 +32,7 @@ db.serialize(() => {
   )
   `);
 
-  // db.run(`ALTER TABLE mappings ADD COLUMN veracityApiKey TEXT`);
-  // db.run(
-  //   `ALTER TABLE mappings ADD COLUMN rateLimitPerHour INTEGER DEFAULT 100`,
-  // );
-  // db.run(`ALTER TABLE mappings ADD COLUMN retentionDays INTEGER DEFAULT 30`);
+
 
   db.run(`
   CREATE TABLE IF NOT EXISTS oauth_tokens (
