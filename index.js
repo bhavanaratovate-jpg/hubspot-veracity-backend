@@ -1624,9 +1624,18 @@ app.get("/hubspot-lists", async (req, res) => {
     //   value: String(list.id || list.listId),
     // }));
 
+    // const formattedLists = (data.lists || []).map((list) => ({
+    //   label: `${list.name} (${list.metaData?.size || 0})`,
+    //   value: String(list.listId),
+    // }));
+
+    console.log("FULL LIST OBJECT:", data.lists[0]);
+
     const formattedLists = (data.lists || []).map((list) => ({
       label: `${list.name} (${list.metaData?.size || 0})`,
-      value: String(list.listId),
+      value: String(
+        list.ilsFilterBranch?.filterBranchOperator || list.listId || list.id,
+      ),
     }));
 
     console.log("FORMATTED LISTS:", formattedLists);
