@@ -1633,6 +1633,8 @@ app.get("/hubspot-lists", async (req, res) => {
 
     const lists = data.lists || [];
 
+    console.log("RAW HUBSPOT LISTS:", JSON.stringify(lists, null, 2));
+
     const formattedLists = lists.map((list) => {
       console.log("LIST IDS:", {
         listId: list.listId,
