@@ -1216,8 +1216,6 @@ app.post("/bulk-validate", async (req, res) => {
 
     const listData = await listResponse.json();
 
-    console.log(`Fetched ${listData.total} contacts from HubSpot`);
-
     batchJob.total = listData.total;
 
     batchJob.status = "running";
@@ -1251,6 +1249,7 @@ app.post("/bulk-validate", async (req, res) => {
 
       await Promise.all(
         chunk.map(async (member) => {
+          let contactId = "";
           // for (const member of listData.results) {
           const allowed = await checkRateLimit(
             portalId,
@@ -1265,7 +1264,7 @@ app.post("/bulk-validate", async (req, res) => {
           try {
             // const contactId = member.recordId;
 
-            const contactId = member.vid;
+            contactId = member.vid;
 
             // console.log("Processing Contact:", contactId);
 
@@ -1654,6 +1653,8 @@ app.get("/hubspot-lists", async (req, res) => {
       label: `${list.name} (${list.metaData?.size || 0})`,
       value: String(list.dynamic ? list.listId : list.id),
     }));
+
+    console.log("FULL HUBSPOT LIST:", list);
 
     console.log("FORMATTED LISTS:", formattedLists);
 
