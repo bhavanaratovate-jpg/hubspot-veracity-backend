@@ -1237,8 +1237,17 @@ app.post("/bulk-validate", async (req, res) => {
 
     const workerLimit = propertyMappings.maxConcurrentWorkers || 1;
 
-    for (let i = 0; i < listData.results.length; i += workerLimit) {
-      const chunk = listData.results.slice(i, i + workerLimit);
+    const contacts = listData.contacts || [];
+
+    console.log(`Fetched ${contacts.length} contacts from HubSpot`);
+
+    batchJob.total = contacts.length;
+
+    // for (let i = 0; i < listData.results.length; i += workerLimit) {
+    //   const chunk = listData.results.slice(i, i + workerLimit);
+
+    for (let i = 0; i < contacts.length; i += workerLimit) {
+      const chunk = contacts.slice(i, i + workerLimit);
 
       await Promise.all(
         chunk.map(async (member) => {
@@ -1254,9 +1263,11 @@ app.post("/bulk-validate", async (req, res) => {
             // break;
           }
           try {
-            const contactId = member.recordId;
+            // const contactId = member.recordId;
 
-            console.log("Processing Contact:", contactId);
+            const contactId = member.vid;
+
+            // console.log("Processing Contact:", contactId);
 
             // const total = listData?.results?.length || 0;
 
