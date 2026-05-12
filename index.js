@@ -1517,7 +1517,7 @@ app.post("/settings", validatePortalAccess, async (req, res) => {
         maxRequestsPerSecond,
         maxConcurrentWorkers
       )
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
 
       ON CONFLICT(portalId)
       DO UPDATE SET
@@ -1527,7 +1527,7 @@ app.post("/settings", validatePortalAccess, async (req, res) => {
         carrierProperty = excluded.carrierProperty,
         validatedAtProperty =
           excluded.validatedAtProperty,
-          overwriteExisting = ?,
+          overwriteExisting = excluded.overwriteExisting,
           veracityApiKey =
           excluded.veracityApiKey,
           rateLimitPerHour =
