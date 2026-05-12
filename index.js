@@ -6,7 +6,7 @@ const crypto = require("crypto");
 require("dotenv").config();
 
 function validatePortalAccess(req, res, next) {
-  const portalId = req.body.portalId || req.query.portalId;
+  const portalId = req.body?.portalId || req.query?.portalId;
 
   if (!portalId) {
     return sendError(res, 400, "portalId is required");
