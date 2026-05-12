@@ -1628,7 +1628,13 @@ app.get("/hubspot-lists", async (req, res) => {
     console.log("FULL LIST OBJECT:", data.lists[0]);
 
 
-    const lists = response.lists || response.results || [];
+    const lists = Array.isArray(response)
+  ? response
+  : response.lists
+  ? response.lists
+  : response.results
+  ? response.results
+  : [response];
 
     const formattedLists = lists.map((list) => {
       console.log("LIST IDS:", {
