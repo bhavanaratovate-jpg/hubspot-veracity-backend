@@ -1235,7 +1235,8 @@ app.post("/bulk-validate", async (req, res) => {
 
     const workerLimit = propertyMappings.maxConcurrentWorkers || 1;
 
-    const contacts = listData.contacts || [];
+    // const contacts = listData.contacts || [];
+    const contacts = listData.results || [];
 
     console.log(`Fetched ${contacts.length} contacts from HubSpot`);
 
@@ -1264,7 +1265,9 @@ app.post("/bulk-validate", async (req, res) => {
           try {
             // const contactId = member.recordId;
 
-            contactId = member.vid;
+            // contactId = member.vid;
+
+            contactId = member.recordId;
 
             // console.log("Processing Contact:", contactId);
 
@@ -1603,7 +1606,8 @@ app.get("/hubspot-lists", async (req, res) => {
 
     const accessToken = await getAccessToken(portalId);
 
-    const response = await fetch("https://api.hubapi.com/contacts/v1/lists", {
+    // const response = await fetch("https://api.hubapi.com/contacts/v1/lists", {
+    const response = await fetch("https://api.hubapi.com/crm/v3/lists", {
       method: "GET",
       headers: {
         Authorization: `Bearer ${accessToken}`,
@@ -1638,7 +1642,8 @@ app.get("/hubspot-lists", async (req, res) => {
 
       return {
         label: `${list.name} (${list.metaData?.size || 0})`,
-        value: String(list.listId),
+        // value: String(list.listId),
+        value: String(list.listId || list.id),
       };
     });
 
