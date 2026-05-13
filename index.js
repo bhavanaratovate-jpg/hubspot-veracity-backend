@@ -969,13 +969,24 @@ app.post("/validate-phone", async (req, res) => {
     const phone_number =
       contactData?.properties?.[propertyMappings.phoneProperty];
 
+    // const alreadyValidated =
+    //   contactData?.properties?.[propertyMappings.validationStatusProperty];
+
+    // if (!propertyMappings.overwriteExisting && alreadyValidated) {
+    //   console.log(`Skipping ${contactId} because validation already exists`);
+
+    //   return;
+    // }
+
     const alreadyValidated =
       contactData?.properties?.[propertyMappings.validationStatusProperty];
 
-    if (!propertyMappings.overwriteExisting && alreadyValidated) {
+    if (propertyMappings.overwriteExisting === false && alreadyValidated) {
       console.log(`Skipping ${contactId} because validation already exists`);
 
-      return;
+      return sendSuccess(res, "Validation already exists", {
+        skipped: true,
+      });
     }
 
     // console.log("Fetched Phone:", phone_number);
@@ -1028,14 +1039,14 @@ app.post("/validate-phone", async (req, res) => {
       [propertyMappings.validatedAtProperty]: new Date().toISOString(),
     });
 
-    if (!propertyMappings.overwriteExisting) {
-      const alreadyValidated =
-        contactData?.properties?.[propertyMappings.validationStatusProperty];
+    // if (!propertyMappings.overwriteExisting) {
+    //   const alreadyValidated =
+    //     contactData?.properties?.[propertyMappings.validationStatusProperty];
 
-      if (alreadyValidated) {
-        return sendError(res, 400, "Validation already exists");
-      }
-    }
+    //   if (alreadyValidated) {
+    //     return sendError(res, 400, "Validation already exists");
+    //   }
+    // }
 
     const hubspotProperties = {
       [propertyMappings.validationStatusProperty]: data.success
