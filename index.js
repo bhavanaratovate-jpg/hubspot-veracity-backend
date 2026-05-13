@@ -1823,7 +1823,7 @@ app.post("/settings", validatePortalAccess, async (req, res) => {
         retentionDays,
         failureReasonProperty,
         normalizedPhoneProperty,
-        storeNormalizedPhone,
+        storeNormalizedPhone === true ? 1 : 0,
         maxRequestsPerSecond,
         maxConcurrentWorkers,
       ],
