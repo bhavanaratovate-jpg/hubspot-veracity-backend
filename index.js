@@ -1629,12 +1629,14 @@ app.get("/hubspot-lists", async (req, res) => {
 
     console.log("HubSpot lists fetched successfully");
 
-    console.log("FULL LIST OBJECT:", data.results?.[0]);
+    // console.log("FULL LIST OBJECT:", data.results?.[0]);
 
-    console.log(
-      "FULL HUBSPOT RESPONSE:",
-      JSON.stringify(response.data, null, 2),
-    );
+    // console.log(
+    //   "FULL HUBSPOT RESPONSE:",
+    //   JSON.stringify(response.data, null, 2),
+    // );
+
+    console.log("ACTUAL HUBSPOT DATA:", JSON.stringify(data, null, 2));
 
     // const lists = data.lists || [];
 
@@ -1642,7 +1644,7 @@ app.get("/hubspot-lists", async (req, res) => {
 
     const lists = data.lists || data.results || [];
 
-    console.log("RAW HUBSPOT LISTS:", JSON.stringify(lists, null, 2));
+    // console.log("RAW HUBSPOT LISTS:", JSON.stringify(lists, null, 2));
 
     const formattedLists = lists.map((list) => {
       console.log("LIST IDS:", {
@@ -1658,7 +1660,7 @@ app.get("/hubspot-lists", async (req, res) => {
       };
     });
 
-    console.log("FORMATTED LISTS:", formattedLists);
+    // console.log("FORMATTED LISTS:", formattedLists);
 
     return sendSuccess(res, "Lists fetched successfully", {
       lists: formattedLists,
