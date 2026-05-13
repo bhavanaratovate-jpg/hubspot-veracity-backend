@@ -983,7 +983,10 @@ app.post("/validate-phone", async (req, res) => {
 
     // if (propertyMappings.overwriteExisting === false && alreadyValidated) {
 
-    const overwriteEnabled = Boolean(propertyMappings.overwriteExisting);
+    // const overwriteEnabled = Boolean(propertyMappings.overwriteExisting);
+
+    const overwriteEnabled =
+  String(propertyMappings.overwriteExisting) === "1";
 
     if (!overwriteEnabled && alreadyValidated) {
       console.log(`Skipping ${contactId} because validation already exists`);
