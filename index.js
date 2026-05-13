@@ -854,8 +854,67 @@ function wait(ms) {
 //   );
 // }
 
+// function classifyVeracityError(error, responseData = {}) {
+//   const message = responseData?.message?.toLowerCase() || "";
+
+//   if (message.includes("invalid") || message.includes("format")) {
+//     return {
+//       type: "permanent",
+//       userMessage: "Invalid phone number format.",
+//     };
+//   }
+
+//   if (message.includes("blocked")) {
+//     return {
+//       type: "permanent",
+//       userMessage: "Phone number is blocked.",
+//     };
+//   }
+
+//   if (message.includes("unsupported")) {
+//     return {
+//       type: "permanent",
+//       userMessage: "Unsupported phone number country.",
+//     };
+//   }
+
+//   if (
+//     error.message.includes("429") ||
+//     error.message.includes("500") ||
+//     error.message.includes("timeout") ||
+//     error.message.includes("Transient")
+//   ) {
+//     return {
+//       type: "transient",
+//       userMessage: "Temporary validation issue. Retrying...",
+//     };
+//   }
+
+//   // return {
+//   //   type: "unknown",
+//   //   userMessage: "Phone validation failed. Please try again later.",
+//   // };
+
+//   if (error.message?.includes("Invalid API token")) {
+//     return {
+//       type: "auth",
+//       userMessage: "Invalid Veracity API Key",
+//     };
+//   }
+// }
+
 function classifyVeracityError(error, responseData = {}) {
-  const message = responseData?.message?.toLowerCase() || "";
+  const message =
+    responseData?.message?.toLowerCase() ||
+    responseData?.error?.toLowerCase() ||
+    "";
+
+  if (message.includes("invalid api token")) {
+    return {
+      type: "auth",
+      userMessage: "Invalid Veracity API Key",
+    };
+  }
 
   if (message.includes("invalid") || message.includes("format")) {
     return {
