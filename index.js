@@ -1217,21 +1217,13 @@ app.post("/validate-phone", async (req, res) => {
     //     normalizedPhone;
     // }
 
-    // if (
-    //   propertyMappings.storeNormalizedPhone &&
-    //   propertyMappings.normalizedPhoneProperty &&
-    //   normalizedPhone
-    // )
-
-    const shouldStoreNormalized =
-      String(propertyMappings.storeNormalizedPhone) === "1" ||
-      propertyMappings.storeNormalizedPhone === true;
-
     if (
-      shouldStoreNormalized &&
+      propertyMappings.storeNormalizedPhone &&
       propertyMappings.normalizedPhoneProperty &&
       normalizedPhone
-    ) {
+    )
+    
+    {
       const maskedPhone =
         normalizedPhone.length > 6
           ? `${normalizedPhone.slice(0, 4)}******${normalizedPhone.slice(-2)}`
@@ -1587,18 +1579,8 @@ app.post("/bulk-validate", async (req, res) => {
             //     normalizedPhone;
             // }
 
-            // if (
-            //   propertyMappings.storeNormalizedPhone &&
-            //   propertyMappings.normalizedPhoneProperty &&
-            //   normalizedPhone
-            // )
-
-            const shouldStoreNormalized =
-              String(propertyMappings.storeNormalizedPhone) === "1" ||
-              propertyMappings.storeNormalizedPhone === true;
-
             if (
-              shouldStoreNormalized &&
+              propertyMappings.storeNormalizedPhone &&
               propertyMappings.normalizedPhoneProperty &&
               normalizedPhone
             ) {
@@ -1823,7 +1805,7 @@ app.post("/settings", validatePortalAccess, async (req, res) => {
         retentionDays,
         failureReasonProperty,
         normalizedPhoneProperty,
-        storeNormalizedPhone === true ? 1 : 0,
+        storeNormalizedPhone,
         maxRequestsPerSecond,
         maxConcurrentWorkers,
       ],
