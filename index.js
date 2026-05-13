@@ -1163,7 +1163,8 @@ app.post("/validate-phone", async (req, res) => {
     // }
 
     if (!decryptedApiKey?.trim()) {
-      return sendError(res, 400, "Veracity API Key is required");
+      // return sendError(res, 400, "Veracity API Key is required");
+      throw new Error("Veracity API Key is required");
     }
 
     const { normalizedPhone, data } = await validatePhoneWithVeracity(
