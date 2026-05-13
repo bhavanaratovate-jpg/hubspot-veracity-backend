@@ -1632,7 +1632,7 @@ app.get("/hubspot-lists", async (req, res) => {
       return sendError(res, 500, "Failed to fetch HubSpot lists");
     }
 
-    const data = await response.json();
+    // const data = await response.json();
 
     // console.log("LIST RESPONSE:", data);
 
