@@ -945,7 +945,8 @@ app.post("/validate-phone", async (req, res) => {
 
     const contactRes = await fetch(
       // `https://api.hubapi.com/crm/v3/objects/contacts/${contactId}?properties=phone`,
-      `https://api.hubapi.com/crm/v3/objects/${hubspotObjectType}/${contactId}?properties=${propertyMappings.phoneProperty}`,
+      // `https://api.hubapi.com/crm/v3/objects/${hubspotObjectType}/${contactId}?properties=${propertyMappings.phoneProperty}`,
+      `https://api.hubapi.com/crm/v3/objects/${hubspotObjectType}/${contactId}?properties=${propertyMappings.phoneProperty}&properties=${propertyMappings.validationStatusProperty}`,
       {
         method: "GET",
         headers: {
@@ -985,8 +986,11 @@ app.post("/validate-phone", async (req, res) => {
 
     // const overwriteEnabled = Boolean(propertyMappings.overwriteExisting);
 
-    const overwriteEnabled =
-  String(propertyMappings.overwriteExisting) === "1";
+    console.log("ALREADY VALIDATED:", alreadyValidated);
+
+    const overwriteEnabled = String(propertyMappings.overwriteExisting) === "1";
+
+    console.log("OVERWRITE:", overwriteEnabled);
 
     if (!overwriteEnabled && alreadyValidated) {
       console.log(`Skipping ${contactId} because validation already exists`);
