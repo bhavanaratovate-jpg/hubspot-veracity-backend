@@ -388,6 +388,12 @@ async function validatePhoneWithVeracity(phone, contactId, apiKey) {
         },
       );
 
+      console.log("VERACITY STATUS:", response.status);
+
+      const rawText = await response.text();
+
+      console.log("VERACITY RAW RESPONSE:", rawText);
+
       // if (!response.ok) {
       //   if (response.status >= 500 || response.status === 429) {
       //     throw new Error(`Transient API failure: ${response.status}`);
@@ -415,7 +421,9 @@ async function validatePhoneWithVeracity(phone, contactId, apiKey) {
         throw new Error(apiMessage);
       }
 
-      const data = await response.json();
+      // const data = await response.json();
+
+      const data = rawText ? JSON.parse(rawText) : {};
 
       return {
         normalizedPhone,
