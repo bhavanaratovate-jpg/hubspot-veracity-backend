@@ -915,7 +915,17 @@ function classifyVeracityError(error, responseData = {}) {
     responseData?.error?.toLowerCase() ||
     "";
 
-  if (message.includes("invalid api token")) {
+  // if (message.includes("invalid api token")) {
+  //   return {
+  //     type: "auth",
+  //     userMessage: "Invalid Veracity API Key",
+  //   };
+  // }
+
+  if (
+    message.includes("invalid api token") ||
+    message.includes("invalid veracity api key")
+  ) {
     return {
       type: "auth",
       userMessage: "Invalid Veracity API Key",
@@ -923,10 +933,14 @@ function classifyVeracityError(error, responseData = {}) {
   }
 
   // if (message.includes("invalid") || message.includes("format")) {
+  // if (
+  //   (message.includes("invalid") &&
+  //     !message.includes("api token") &&
+  //     !message.includes("api key")) ||
+  //   message.includes("format")
+  // )
   if (
-    (message.includes("invalid") &&
-      !message.includes("api token") &&
-      !message.includes("api key")) ||
+    (message.includes("invalid") && !message.includes("api")) ||
     message.includes("format")
   ) {
     return {
