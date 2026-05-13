@@ -1592,7 +1592,7 @@ app.post("/settings", validatePortalAccess, async (req, res) => {
         validationStatusProperty,
         carrierProperty,
         validatedAtProperty,
-        overwriteExisting ? 1 : 0,
+        overwriteExisting === true ? 1 : 0,
         // veracityApiKey,
         encrypt(veracityApiKey),
         rateLimitPerHour,
