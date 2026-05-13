@@ -1638,7 +1638,9 @@ app.get("/hubspot-lists", async (req, res) => {
 
     // const lists = data.lists || [];
 
-    const lists = data.results || [];
+    // const lists = data.results || [];
+
+    const lists = data.lists || data.results || [];
 
     console.log("RAW HUBSPOT LISTS:", JSON.stringify(lists, null, 2));
 
