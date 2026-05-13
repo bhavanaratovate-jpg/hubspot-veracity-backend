@@ -1217,8 +1217,18 @@ app.post("/validate-phone", async (req, res) => {
     //     normalizedPhone;
     // }
 
+    // if (
+    //   propertyMappings.storeNormalizedPhone &&
+    //   propertyMappings.normalizedPhoneProperty &&
+    //   normalizedPhone
+    // )
+
+    const shouldStoreNormalized =
+      String(propertyMappings.storeNormalizedPhone) === "1" ||
+      propertyMappings.storeNormalizedPhone === true;
+
     if (
-      propertyMappings.storeNormalizedPhone &&
+      shouldStoreNormalized &&
       propertyMappings.normalizedPhoneProperty &&
       normalizedPhone
     ) {
@@ -1577,8 +1587,18 @@ app.post("/bulk-validate", async (req, res) => {
             //     normalizedPhone;
             // }
 
+            // if (
+            //   propertyMappings.storeNormalizedPhone &&
+            //   propertyMappings.normalizedPhoneProperty &&
+            //   normalizedPhone
+            // )
+
+            const shouldStoreNormalized =
+              String(propertyMappings.storeNormalizedPhone) === "1" ||
+              propertyMappings.storeNormalizedPhone === true;
+
             if (
-              propertyMappings.storeNormalizedPhone &&
+              shouldStoreNormalized &&
               propertyMappings.normalizedPhoneProperty &&
               normalizedPhone
             ) {
