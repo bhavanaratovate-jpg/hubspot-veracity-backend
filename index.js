@@ -1607,9 +1607,8 @@ app.get("/hubspot-lists", async (req, res) => {
     const accessToken = await getAccessToken(portalId);
 
     // const response = await fetch("https://api.hubapi.com/contacts/v1/lists", {
-    // const response = await fetch("https://api.hubapi.com/crm/v3/lists", {
     const response = await fetch(
-      "https://api.hubapi.com/crm/v3/lists/object-type-id/0-1",
+      "https://api.hubapi.com/crm/v3/lists?count=100",
       {
         method: "GET",
         headers: {
@@ -1619,8 +1618,11 @@ app.get("/hubspot-lists", async (req, res) => {
       },
     );
 
-    console.log("RAW RESPONSE:", response);
-    console.log("RAW DATA:", response?.data);
+    const data = await response.json();
+
+    console.log("ACTUAL HUBSPOT DATA:", data);
+
+    const lists = data.results || [];
 
     if (!response.ok) {
       const errorText = await response.text();
@@ -1649,7 +1651,7 @@ app.get("/hubspot-lists", async (req, res) => {
 
     // const lists = data.results || [];
 
-    const lists = data.lists || data.results || [];
+    // const lists = data.lists || data.results || [];
 
     // console.log("RAW HUBSPOT LISTS:", JSON.stringify(lists, null, 2));
 
