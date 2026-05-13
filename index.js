@@ -1619,9 +1619,8 @@ app.get("/hubspot-lists", async (req, res) => {
       },
     );
 
-    console.log("FULL HUBSPOT RESPONSE:", response.data);
-
-    const listsed = response.data.results || [];
+    console.log("RAW RESPONSE:", response);
+    console.log("RAW DATA:", response?.data);
 
     if (!response.ok) {
       const errorText = await response.text();
