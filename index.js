@@ -969,6 +969,15 @@ app.post("/validate-phone", async (req, res) => {
     const phone_number =
       contactData?.properties?.[propertyMappings.phoneProperty];
 
+    const alreadyValidated =
+      contactData?.properties?.[propertyMappings.validationStatusProperty];
+
+    if (!propertyMappings.overwriteExisting && alreadyValidated) {
+      console.log(`Skipping ${contactId} because validation already exists`);
+
+      return;
+    }
+
     // console.log("Fetched Phone:", phone_number);
 
     console.log("Fetched Phone:", maskPhone(phone_number));
@@ -1185,6 +1194,7 @@ app.post("/bulk-validate", async (req, res) => {
       valid: 0,
       invalid: 0,
       failed: 0,
+      skipped: 0,
       startedAt: new Date().toISOString(),
     };
 
@@ -1433,6 +1443,7 @@ app.post("/bulk-validate", async (req, res) => {
         valid: batchJob.valid,
         invalid: batchJob.invalid,
         failed: batchJob.failed,
+        skipped: batchJob.skipped,
         status: batchJob.status,
       },
     });
@@ -1608,8 +1619,7 @@ app.get("/hubspot-lists", async (req, res) => {
 
     // const response = await fetch("https://api.hubapi.com/contacts/v1/lists", {
     const response = await fetch(
-      // "https://api.hubapi.com/crm/v3/lists?count=100",
-      "https://api.hubapi.com/crm/v3/lists/object-type-id/0-1?count=100",
+      "https://api.hubapi.com/crm/v3/lists?count=100",
       {
         method: "GET",
         headers: {
