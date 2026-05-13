@@ -1209,27 +1209,12 @@ app.post("/validate-phone", async (req, res) => {
       [propertyMappings.validatedAtProperty]: new Date().toISOString(),
     };
 
-    // if (
-    //   propertyMappings.storeNormalizedPhone &&
-    //   propertyMappings.normalizedPhoneProperty
-    // ) {
-    //   hubspotProperties[propertyMappings.normalizedPhoneProperty] =
-    //     normalizedPhone;
-    // }
-
     if (
       propertyMappings.storeNormalizedPhone &&
-      propertyMappings.normalizedPhoneProperty &&
-      normalizedPhone
-    )
-    
-    {
-      const maskedPhone =
-        normalizedPhone.length > 6
-          ? `${normalizedPhone.slice(0, 4)}******${normalizedPhone.slice(-2)}`
-          : normalizedPhone;
-
-      hubspotProperties[propertyMappings.normalizedPhoneProperty] = maskedPhone;
+      propertyMappings.normalizedPhoneProperty
+    ) {
+      hubspotProperties[propertyMappings.normalizedPhoneProperty] =
+        normalizedPhone;
     }
 
     // await updateHubSpotObject(accessToken, hubspotObjectType, contactId,hubspotProperties, {
@@ -1571,26 +1556,12 @@ app.post("/bulk-validate", async (req, res) => {
               bulk_validated_at: new Date().toISOString(),
             };
 
-            // if (
-            //   propertyMappings.storeNormalizedPhone &&
-            //   propertyMappings.normalizedPhoneProperty
-            // ) {
-            //   hubspotProperties[propertyMappings.normalizedPhoneProperty] =
-            //     normalizedPhone;
-            // }
-
             if (
               propertyMappings.storeNormalizedPhone &&
-              propertyMappings.normalizedPhoneProperty &&
-              normalizedPhone
+              propertyMappings.normalizedPhoneProperty
             ) {
-              const maskedPhone =
-                normalizedPhone.length > 6
-                  ? `${normalizedPhone.slice(0, 4)}******${normalizedPhone.slice(-2)}`
-                  : normalizedPhone;
-
               hubspotProperties[propertyMappings.normalizedPhoneProperty] =
-                maskedPhone;
+                normalizedPhone;
             }
 
             await updateHubSpotObject(
