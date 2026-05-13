@@ -441,7 +441,12 @@ async function validatePhoneWithVeracity(phone, contactId, apiKey) {
 
       console.log("Error classification:", classifiedError);
 
-      if (classifiedError.type === "permanent") {
+      // if (classifiedError.type === "permanent") {
+
+      if (
+        classifiedError.type === "permanent" ||
+        classifiedError.type === "auth"
+      ) {
         throw new Error(classifiedError.userMessage);
       }
 
@@ -917,7 +922,13 @@ function classifyVeracityError(error, responseData = {}) {
     };
   }
 
-  if (message.includes("invalid") || message.includes("format")) {
+  // if (message.includes("invalid") || message.includes("format")) {
+  if (
+    (message.includes("invalid") &&
+      !message.includes("api token") &&
+      !message.includes("api key")) ||
+    message.includes("format")
+  ) {
     return {
       type: "permanent",
       userMessage: "Invalid phone number format.",
