@@ -1207,6 +1207,8 @@ app.post("/validate-phone", async (req, res) => {
       [propertyMappings.carrierProperty]: data.data?.carrier_name || "",
 
       [propertyMappings.validatedAtProperty]: new Date().toISOString(),
+
+      [propertyMappings.failureReasonProperty]: "",
     };
 
     // if (
@@ -1569,6 +1571,8 @@ app.post("/bulk-validate", async (req, res) => {
                 veracityData?.data?.carrier_name || "",
 
               [propertyMappings.validatedAtProperty]: new Date().toISOString(),
+
+              [propertyMappings.failureReasonProperty]: "",
 
               bulk_validation_status: "completed",
 
