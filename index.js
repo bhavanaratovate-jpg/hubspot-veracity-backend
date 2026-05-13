@@ -1178,19 +1178,9 @@ app.post("/validate-phone", async (req, res) => {
 
     console.log("Veracity validation completed successfully");
 
-    // console.log("FINAL HUBSPOT PROPERTIES:");
+    console.log("FINAL HUBSPOT PROPERTIES:");
 
-    // console.log({
-    //   [propertyMappings.validationStatusProperty]: data.success
-    //     ? "valid"
-    //     : "invalid",
-
-    //   [propertyMappings.carrierProperty]: data.data?.carrier_name || "",
-
-    //   [propertyMappings.validatedAtProperty]: new Date().toISOString(),
-    // });
-
-    const finalPropertiesLog = {
+    console.log({
       [propertyMappings.validationStatusProperty]: data.success
         ? "valid"
         : "invalid",
@@ -1198,18 +1188,7 @@ app.post("/validate-phone", async (req, res) => {
       [propertyMappings.carrierProperty]: data.data?.carrier_name || "",
 
       [propertyMappings.validatedAtProperty]: new Date().toISOString(),
-    };
-
-    if (
-      propertyMappings.storeNormalizedPhone &&
-      propertyMappings.normalizedPhoneProperty
-    ) {
-      finalPropertiesLog[propertyMappings.normalizedPhoneProperty] =
-        normalizedPhone;
-    }
-
-    console.log("FINAL HUBSPOT PROPERTIES:");
-    console.log(finalPropertiesLog);
+    });
 
     // if (!propertyMappings.overwriteExisting) {
     //   const alreadyValidated =
