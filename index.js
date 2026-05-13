@@ -406,7 +406,7 @@ async function validatePhoneWithVeracity(phone, contactId, apiKey) {
         let errorData = {};
 
         try {
-          errorData = await response.json();
+          errorData = rawText ? JSON.parse(rawText) : {};
         } catch (e) {}
 
         const apiMessage =
@@ -414,11 +414,12 @@ async function validatePhoneWithVeracity(phone, contactId, apiKey) {
           errorData?.error ||
           `Veracity API failed (${response.status})`;
 
-        if (response.status >= 500 || response.status === 429) {
-          throw new Error(apiMessage);
-        }
+        const classifiedError = classifyVeracityError(
+          new Error(apiMessage),
+          errorData,
+        );
 
-        throw new Error(apiMessage);
+        throw new Error(classifiedError.userMessage);
       }
 
       // const data = await response.json();
