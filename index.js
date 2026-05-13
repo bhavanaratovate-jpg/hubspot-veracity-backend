@@ -372,7 +372,8 @@ async function validatePhoneWithVeracity(phone, contactId, apiKey) {
       console.log(`Veracity attempt ${attempt + 1}`);
 
       const response = await fetch(
-        "https://api.veracityhub.io/v2/verify/carrier",
+        // "https://api.veracityhub.io/v2/verify/carrier",
+        "https://dev.api.veracityhub.io/v2/verify/carrier",
         {
           method: "POST",
           headers: {
