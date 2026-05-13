@@ -1217,7 +1217,7 @@ app.post("/validate-phone", async (req, res) => {
 
       [propertyMappings.validatedAtProperty]: new Date().toISOString(),
 
-      // [propertyMappings.failureReasonProperty]: null,
+      [propertyMappings.failureReasonProperty]: "",
     };
 
     // if (
