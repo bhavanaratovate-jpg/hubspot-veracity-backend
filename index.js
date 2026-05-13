@@ -1629,14 +1629,16 @@ app.get("/hubspot-lists", async (req, res) => {
 
     console.log("HubSpot lists fetched successfully");
 
-    console.log("FULL LIST OBJECT:", data.lists[0]);
+    console.log("FULL LIST OBJECT:", data.results?.[0]);
 
     console.log(
       "FULL HUBSPOT RESPONSE:",
       JSON.stringify(response.data, null, 2),
     );
 
-    const lists = data.lists || [];
+    // const lists = data.lists || [];
+
+    const lists = data.results || [];
 
     console.log("RAW HUBSPOT LISTS:", JSON.stringify(lists, null, 2));
 
