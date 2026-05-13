@@ -480,8 +480,16 @@ async function updateHubSpotObject(
     },
   );
 
+  // if (!response.ok) {
+  //   // throw new Error(`HubSpot update failed for contact ${contactId}`);
+  //   throw new Error(`HubSpot update failed for ${objectType} ${recordId}`);
+  // }
+
   if (!response.ok) {
-    // throw new Error(`HubSpot update failed for contact ${contactId}`);
+    const errorText = await response.text();
+
+    console.log("HUBSPOT UPDATE ERROR:", errorText);
+
     throw new Error(`HubSpot update failed for ${objectType} ${recordId}`);
   }
 
@@ -1208,7 +1216,7 @@ app.post("/validate-phone", async (req, res) => {
 
       [propertyMappings.validatedAtProperty]: new Date().toISOString(),
 
-      [propertyMappings.failureReasonProperty]: "",
+      // [propertyMappings.failureReasonProperty]: null,
     };
 
     // if (
@@ -1572,7 +1580,7 @@ app.post("/bulk-validate", async (req, res) => {
 
               [propertyMappings.validatedAtProperty]: new Date().toISOString(),
 
-              [propertyMappings.failureReasonProperty]: "",
+              // [propertyMappings.failureReasonProperty]: "",
 
               bulk_validation_status: "completed",
 
