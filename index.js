@@ -1607,13 +1607,21 @@ app.get("/hubspot-lists", async (req, res) => {
     const accessToken = await getAccessToken(portalId);
 
     // const response = await fetch("https://api.hubapi.com/contacts/v1/lists", {
-    const response = await fetch("https://api.hubapi.com/crm/v3/lists", {
-      method: "GET",
-      headers: {
-        Authorization: `Bearer ${accessToken}`,
-        "Content-Type": "application/json",
+    // const response = await fetch("https://api.hubapi.com/crm/v3/lists", {
+    const response = await fetch(
+      "https://api.hubapi.com/crm/v3/lists/object-type-id/0-1",
+      {
+        method: "GET",
+        headers: {
+          Authorization: `Bearer ${accessToken}`,
+          "Content-Type": "application/json",
+        },
       },
-    });
+    );
+
+    console.log("FULL HUBSPOT RESPONSE:", response.data);
+
+    const listsed = response.data.results || [];
 
     if (!response.ok) {
       const errorText = await response.text();
