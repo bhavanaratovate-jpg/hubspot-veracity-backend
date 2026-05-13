@@ -388,12 +388,31 @@ async function validatePhoneWithVeracity(phone, contactId, apiKey) {
         },
       );
 
+      // if (!response.ok) {
+      //   if (response.status >= 500 || response.status === 429) {
+      //     throw new Error(`Transient API failure: ${response.status}`);
+      //   }
+
+      //   throw new Error("Veracity API request failed");
+      // }
+
       if (!response.ok) {
+        let errorData = {};
+
+        try {
+          errorData = await response.json();
+        } catch (e) {}
+
+        const apiMessage =
+          errorData?.message ||
+          errorData?.error ||
+          `Veracity API failed (${response.status})`;
+
         if (response.status >= 500 || response.status === 429) {
-          throw new Error(`Transient API failure: ${response.status}`);
+          throw new Error(apiMessage);
         }
 
-        throw new Error("Veracity API request failed");
+        throw new Error(apiMessage);
       }
 
       const data = await response.json();
@@ -1211,7 +1230,9 @@ app.post("/validate-phone", async (req, res) => {
       "",
     );
 
-    return sendError(res, 500, "Something went wrong");
+    // return sendError(res, 500, "Something went wrong");
+
+    return sendError(res, 500, error.message || "Phone validation failed");
   }
 });
 
