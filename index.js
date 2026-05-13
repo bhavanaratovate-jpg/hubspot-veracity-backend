@@ -88,7 +88,7 @@ const ALERT_THRESHOLD = 0.3;
 // const MAX_CONCURRENT_BATCHES = 5;
 
 const requiredEnvVars = [
-  "VERACITY_API_KEY",
+  // "VERACITY_API_KEY",
   "HUBSPOT_CLIENT_ID",
   "HUBSPOT_CLIENT_SECRET",
   // "HUBSPOT_REFRESH_TOKEN",
@@ -378,7 +378,8 @@ async function validatePhoneWithVeracity(phone, contactId, apiKey) {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
-            "X-API-TOKEN": apiKey || process.env.VERACITY_API_KEY,
+            // "X-API-TOKEN": apiKey || process.env.VERACITY_API_KEY,
+            "X-API-TOKEN": apiKey,
           },
           body: JSON.stringify({
             phone_number: normalizedPhone,
@@ -1016,13 +1017,39 @@ app.post("/validate-phone", async (req, res) => {
       return sendError(res, 400, "Phone not found in HubSpot");
     }
 
+    // console.log("Calling Veracity API...");
+
+    // const { normalizedPhone, data } = await validatePhoneWithVeracity(
+    //   phone_number,
+    //   contactId,
+    //   // propertyMappings.veracityApiKey,
+    //   decrypt(propertyMappings.veracityApiKey),
+    // );
+
     console.log("Calling Veracity API...");
+
+    // const decryptedApiKey = decrypt(propertyMappings.veracityApiKey);
+
+    let decryptedApiKey = "";
+
+    try {
+      decryptedApiKey = decrypt(propertyMappings.veracityApiKey);
+    } catch (e) {
+      return sendError(res, 400, "Invalid encrypted API key");
+    }
+
+    // if (!decryptedApiKey) {
+    //   return sendError(res, 400, "Veracity API Key is required");
+    // }
+
+    if (!decryptedApiKey?.trim()) {
+      return sendError(res, 400, "Veracity API Key is required");
+    }
 
     const { normalizedPhone, data } = await validatePhoneWithVeracity(
       phone_number,
       contactId,
-      // propertyMappings.veracityApiKey,
-      decrypt(propertyMappings.veracityApiKey),
+      decryptedApiKey,
     );
 
     console.log("Veracity completed");
@@ -1334,19 +1361,47 @@ app.post("/bulk-validate", async (req, res) => {
               return;
             }
 
+            // const { normalizedPhone, data: veracityData } =
+            //   await validatePhoneWithVeracity(
+            //     phone,
+            //     contactId,
+            //     // propertyMappings.veracityApiKey,
+            //     decrypt(propertyMappings.veracityApiKey),
+            //   );
+
+            // console.log(
+            //   `Validation completed for ${contactId} - ${
+            //     veracityData.success ? "VALID" : "INVALID"
+            //   }`,
+            // );
+
+            // const decryptedApiKey = decrypt(propertyMappings.veracityApiKey);
+
+            let decryptedApiKey = "";
+
+            try {
+              decryptedApiKey = decrypt(propertyMappings.veracityApiKey);
+            } catch (e) {
+              // return sendError(res, 400, "Invalid encrypted API key");
+
+              throw new Error("Invalid encrypted API key");
+            }
+
+            // if (!decryptedApiKey) {
+            //   throw new Error("Veracity API Key is required");
+            // }
+
+            if (!decryptedApiKey?.trim()) {
+              // return sendError(res, 400, "Veracity API Key is required");
+              throw new Error("Veracity API Key is required");
+            }
+
             const { normalizedPhone, data: veracityData } =
               await validatePhoneWithVeracity(
                 phone,
                 contactId,
-                // propertyMappings.veracityApiKey,
-                decrypt(propertyMappings.veracityApiKey),
+                decryptedApiKey,
               );
-
-            console.log(
-              `Validation completed for ${contactId} - ${
-                veracityData.success ? "VALID" : "INVALID"
-              }`,
-            );
 
             // HUBSPOT UPDATE
             // await updateHubSpotObject(accessToken, "contacts", contactId, {
