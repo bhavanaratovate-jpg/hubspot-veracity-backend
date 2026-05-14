@@ -1807,8 +1807,7 @@ app.post("/bulk-validate", async (req, res) => {
             // const phone = contactData?.properties?.phone;
             // const phone =
             //   contactData?.properties?.[propertyMappings.phoneProperty];
-            const phone =
-              contactData?.properties?.phone;
+            const phone = contactData?.properties?.phone;
 
             console.log("Phone:", maskPhone(phone));
 
@@ -1917,6 +1916,35 @@ app.post("/bulk-validate", async (req, res) => {
             //     new Date().toISOString(),
             // };
 
+            // const hubspotProperties = {
+            //   [propertyMappings.validationStatusProperty]: veracityData.success
+            //     ? "valid"
+            //     : "invalid",
+
+            //   [propertyMappings.carrierProperty]:
+            //     veracityData?.data?.carrier_name || "",
+
+            //   [propertyMappings.validatedAtProperty]: new Date().toISOString(),
+            // };
+
+            // if (bulkMappings.bulkValidationStatusProperty) {
+            //   hubspotProperties[bulkMappings.bulkValidationStatusProperty] =
+            //     "completed";
+            // }
+
+            // if (bulkMappings.bulkValidationSummaryProperty) {
+            //   hubspotProperties[
+            //     bulkMappings.bulkValidationSummaryProperty
+            //   ] = veracityData.success
+            //     ? "Phone validated successfully"
+            //     : "Invalid phone number detected";
+            // }
+
+            // if (bulkMappings.bulkValidatedAtProperty) {
+            //   hubspotProperties[bulkMappings.bulkValidatedAtProperty] =
+            //     new Date().toISOString();
+            // }
+
             const hubspotProperties = {
               [propertyMappings.validationStatusProperty]: veracityData.success
                 ? "valid"
@@ -1934,11 +1962,10 @@ app.post("/bulk-validate", async (req, res) => {
             }
 
             if (bulkMappings.bulkValidationSummaryProperty) {
-              hubspotProperties[
-                bulkMappings.bulkValidationSummaryProperty
-              ] = veracityData.success
-                ? "Phone validated successfully"
-                : "Invalid phone number detected";
+              hubspotProperties[bulkMappings.bulkValidationSummaryProperty] =
+                veracityData.success
+                  ? "Phone validated successfully"
+                  : "Invalid phone number detected";
             }
 
             if (bulkMappings.bulkValidatedAtProperty) {
