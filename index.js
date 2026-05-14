@@ -1756,8 +1756,7 @@ app.post("/bulk-validate", async (req, res) => {
 
             // FETCH CONTACT
             const contactResponse = await fetch(
-              // `https://api.hubapi.com/crm/v3/objects/contacts/${contactId}?properties=${propertyMappings.phoneProperty}`,
-              `https://api.hubapi.com/crm/v3/objects/contacts/${contactId}?properties=phone`,
+              `https://api.hubapi.com/crm/v3/objects/contacts/${contactId}?properties=${propertyMappings.phoneProperty}`,
               {
                 headers: {
                   Authorization: `Bearer ${accessToken}`,
@@ -1772,10 +1771,8 @@ app.post("/bulk-validate", async (req, res) => {
             console.log("PHONE PROPERTY:", propertyMappings.phoneProperty);
 
             // const phone = contactData?.properties?.phone;
-            // const phone =
-            //   contactData?.properties?.[propertyMappings.phoneProperty];
-
-            const phone = contactData?.properties?.phone;
+            const phone =
+              contactData?.properties?.[propertyMappings.phoneProperty];
 
             console.log("Phone:", maskPhone(phone));
 
@@ -1855,6 +1852,37 @@ app.post("/bulk-validate", async (req, res) => {
             //   bulk_validated_at: new Date().toISOString(),
             // });
 
+            // const hubspotProperties = {
+            //   [propertyMappings.validationStatusProperty]: veracityData.success
+            //     ? "valid"
+            //     : "invalid",
+
+            //   [propertyMappings.carrierProperty]:
+            //     veracityData?.data?.carrier_name || "",
+
+            //   [propertyMappings.validatedAtProperty]: new Date().toISOString(),
+
+            //   //  [propertyMappings.failureReasonProperty]: "",
+
+            //   // bulk_validation_status: "completed",
+
+            //   // bulk_validation_summary: veracityData.success
+            //   //   ? "Phone validated successfully"
+            //   //   : "Invalid phone number detected",
+
+            //   // bulk_validated_at: new Date().toISOString(),
+
+            //   [propertyMappings.bulkValidationStatusProperty]: "completed",
+
+            //   [propertyMappings.bulkValidationSummaryProperty]:
+            //     veracityData.success
+            //       ? "Phone validated successfully"
+            //       : "Invalid phone number detected",
+
+            //   [propertyMappings.bulkValidatedAtProperty]:
+            //     new Date().toISOString(),
+            // };
+
             const hubspotProperties = {
               [propertyMappings.validationStatusProperty]: veracityData.success
                 ? "valid"
@@ -1864,27 +1892,25 @@ app.post("/bulk-validate", async (req, res) => {
                 veracityData?.data?.carrier_name || "",
 
               [propertyMappings.validatedAtProperty]: new Date().toISOString(),
-
-              //  [propertyMappings.failureReasonProperty]: "",
-
-              // bulk_validation_status: "completed",
-
-              // bulk_validation_summary: veracityData.success
-              //   ? "Phone validated successfully"
-              //   : "Invalid phone number detected",
-
-              // bulk_validated_at: new Date().toISOString(),
-
-              [propertyMappings.bulkValidationStatusProperty]: "completed",
-
-              [propertyMappings.bulkValidationSummaryProperty]:
-                veracityData.success
-                  ? "Phone validated successfully"
-                  : "Invalid phone number detected",
-
-              [propertyMappings.bulkValidatedAtProperty]:
-                new Date().toISOString(),
             };
+
+            if (propertyMappings.bulkValidationStatusProperty) {
+              hubspotProperties[propertyMappings.bulkValidationStatusProperty] =
+                "completed";
+            }
+
+            if (propertyMappings.bulkValidationSummaryProperty) {
+              hubspotProperties[
+                propertyMappings.bulkValidationSummaryProperty
+              ] = veracityData.success
+                ? "Phone validated successfully"
+                : "Invalid phone number detected";
+            }
+
+            if (propertyMappings.bulkValidatedAtProperty) {
+              hubspotProperties[propertyMappings.bulkValidatedAtProperty] =
+                new Date().toISOString();
+            }
 
             // if (
             //   propertyMappings.storeNormalizedPhone &&
