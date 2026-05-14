@@ -627,7 +627,7 @@ async function getMappings(portalId) {
   FROM mappings
   WHERE portalid = $1
   `,
-      [portalid],
+      [portalId],
     );
 
     const row = result.rows[0];
@@ -2033,7 +2033,6 @@ app.get("/settings", validatePortalAccess, async (req, res) => {
 
     const result = await db.query(
       // `SELECT * FROM mappings WHERE portalId = $1`,
-      // [req.query.portalId],
 
       `
   SELECT
@@ -2053,7 +2052,7 @@ app.get("/settings", validatePortalAccess, async (req, res) => {
   FROM mappings
   WHERE portalid = $1
   `,
-      [portalid],
+      [req.query.portalId],
     );
 
     const row = result.rows[0];
