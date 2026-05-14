@@ -678,7 +678,16 @@ async function getAccessToken(portalId) {
     // });
 
     const result = await db.query(
-      `SELECT * FROM oauth_tokens WHERE portalId = $1`,
+      // `SELECT * FROM oauth_tokens WHERE portalId = $1`,
+
+      `
+  SELECT
+    "portalId" AS "portalId",
+    "accessToken" AS "accessToken",
+    "refreshToken" AS "refreshToken"
+  FROM oauth_tokens
+  WHERE "portalId" = $1
+  `,
       [portalId],
     );
 
