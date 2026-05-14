@@ -1,38 +1,69 @@
 const express = require("express");
 const fetch = require("node-fetch");
 const cors = require("cors");
+require("dotenv").config();
 const db = require("./database");
 const crypto = require("crypto");
-require("dotenv").config();
 
-function validatePortalAccess(req, res, next) {
-  const portalId = req.body?.portalId || req.query?.portalId;
+// function validatePortalAccess(req, res, next) {
+//   const portalId = req.body?.portalId || req.query?.portalId;
 
-  if (!portalId) {
-    return sendError(res, 400, "portalId is required");
-  }
+//   if (!portalId) {
+//     return sendError(res, 400, "portalId is required");
+//   }
 
-  db.get(
-    `
-    SELECT *
-    FROM oauth_tokens
-    WHERE portalId = ?
-  `,
-    [portalId],
-    (err, row) => {
-      if (err || !row) {
-        return sendError(res, 403, "Unauthorized portal");
-      }
+//   db.get(
+//     `
+//     SELECT *
+//     FROM oauth_tokens
+//     WHERE portalId = ?
+//   `,
+//     [portalId],
+//     (err, row) => {
+//       if (err || !row) {
+//         return sendError(res, 403, "Unauthorized portal");
+//       }
 
-      next();
-    },
-  );
-}
+//       next();
+//     },
+//   );
+// }
 
 // const ENCRYPTION_KEY = crypto
 //   .createHash("sha256")
 //   .update(process.env.ENCRYPTION_KEY)
 //   .digest();
+
+async function validatePortalAccess(req, res, next) {
+  try {
+    const portalId = req.body?.portalId || req.query?.portalId;
+
+    if (!portalId) {
+      return sendError(res, 400, "portalId is required");
+    }
+
+    const result = await db.query(
+      `
+      SELECT *
+      FROM oauth_tokens
+      WHERE portalId = $1
+      `,
+      [portalId],
+    );
+
+    const row = result.rows[0];
+
+    if (!row) {
+      return sendError(res, 403, "Unauthorized portal");
+    }
+
+    next();
+  } catch (error) {
+    console.error("Portal validation error:", error.message);
+
+    return sendError(res, 500, "Portal validation failed");
+  }
+}
 
 const encryptionSecret = process.env.ENCRYPTION_KEY || "test-encryption-key";
 
@@ -206,35 +237,63 @@ app.get("/oauth/callback", async (req, res) => {
 
     console.log("OAuth token generated successfully");
 
-    db.run(
-      `
-  INSERT OR REPLACE INTO oauth_tokens
-  (portalId, accessToken, refreshToken)
-  VALUES (?, ?, ?)
-`,
-      [
-        tokenResponse.hub_id,
-        // tokenResponse.access_token,
-        // tokenResponse.refresh_token,
+    // db.run(
+    //   `INSERT OR REPLACE INTO oauth_tokens
+    //   (portalId, accessToken, refreshToken)
+    //   VALUES (?, ?, ?)
+    //   `,
+    //   [
+    //     tokenResponse.hub_id,
+    //     // tokenResponse.access_token,
+    //     // tokenResponse.refresh_token,
 
-        encrypt(tokenResponse.access_token),
-        encrypt(tokenResponse.refresh_token),
-      ],
-      (err) => {
-        if (err) {
-          console.log("TOKEN SAVE ERROR:", err.message);
-        } else {
-          // console.log("TOKEN SAVED SUCCESSFULLY");
-          logInfo("OAuth token saved successfully", {
-            portalId: tokenResponse.hub_id,
-          });
+    //     encrypt(tokenResponse.access_token),
+    //     encrypt(tokenResponse.refresh_token),
+    //   ],
+    //   (err) => {
+    //     if (err) {
+    //       console.log("TOKEN SAVE ERROR:", err.message);
+    //     } else {
+    //       // console.log("TOKEN SAVED SUCCESSFULLY");
+    //       logInfo("OAuth token saved successfully", {
+    //         portalId: tokenResponse.hub_id,
+    //       });
 
-          // db.all("SELECT * FROM oauth_tokens", [], (err, rows) => {
-          //   console.log(rows);
-          // });
-        }
-      },
-    );
+    //       // db.all("SELECT * FROM oauth_tokens", [], (err, rows) => {
+    //       //   console.log(rows);
+    //       // });
+    //     }
+    //   },
+    // );
+
+    try {
+      await db.query(
+        `
+    INSERT INTO oauth_tokens (
+      portalId,
+      accessToken,
+      refreshToken
+    )
+    VALUES ($1, $2, $3)
+
+    ON CONFLICT (portalId)
+    DO UPDATE SET
+      accessToken = EXCLUDED.accessToken,
+      refreshToken = EXCLUDED.refreshToken
+    `,
+        [
+          tokenResponse.hub_id,
+          encrypt(tokenResponse.access_token),
+          encrypt(tokenResponse.refresh_token),
+        ],
+      );
+
+      logInfo("OAuth token saved successfully", {
+        portalId: tokenResponse.hub_id,
+      });
+    } catch (err) {
+      console.log("TOKEN SAVE ERROR:", err.message);
+    }
 
     res.send("OAuth token generated successfully");
   } catch (error) {
@@ -511,35 +570,65 @@ function sendSuccess(res, message, data = {}) {
   });
 }
 
-function getMappings(portalId) {
-  return new Promise((resolve, reject) => {
-    db.get(
-      `SELECT * FROM mappings WHERE portalId = ?`,
-      // ["default"],
+// function getMappings(portalId) {
+//   return new Promise((resolve, reject) => {
+//     db.get(
+//       `SELECT * FROM mappings WHERE portalId = ?`,
+//       // ["default"],
+//       [portalId],
+//       (err, row) => {
+//         if (err) {
+//           reject(err);
+//         } else {
+//           resolve(
+//             row || {
+//               phoneProperty: "phone",
+//               validationStatusProperty: "veracity_validation_status",
+//               carrierProperty: "veracity_carrier",
+//               validatedAtProperty: "veracity_validated_at",
+//               veracityApiKey: "",
+//               rateLimitPerHour: 100,
+//               retentionDays: 30,
+//               failureReasonProperty: "veracity_failure_reason",
+//               normalizedPhoneProperty: "veracity_normalized_phone",
+//               storeNormalizedPhone: false,
+//               maxConcurrentWorkers: 5,
+//             },
+//           );
+//         }
+//       },
+//     );
+//   });
+// }
+
+async function getMappings(portalId) {
+  try {
+    const result = await db.query(
+      `SELECT * FROM mappings WHERE portalId = $1`,
       [portalId],
-      (err, row) => {
-        if (err) {
-          reject(err);
-        } else {
-          resolve(
-            row || {
-              phoneProperty: "phone",
-              validationStatusProperty: "veracity_validation_status",
-              carrierProperty: "veracity_carrier",
-              validatedAtProperty: "veracity_validated_at",
-              veracityApiKey: "",
-              rateLimitPerHour: 100,
-              retentionDays: 30,
-              failureReasonProperty: "veracity_failure_reason",
-              normalizedPhoneProperty: "veracity_normalized_phone",
-              storeNormalizedPhone: false,
-              maxConcurrentWorkers: 5,
-            },
-          );
-        }
-      },
     );
-  });
+
+    const row = result.rows[0];
+
+    return (
+      row || {
+        phoneProperty: "phone",
+        validationStatusProperty: "veracity_validation_status",
+        carrierProperty: "veracity_carrier",
+        validatedAtProperty: "veracity_validated_at",
+        veracityApiKey: "",
+        rateLimitPerHour: 100,
+        retentionDays: 30,
+        failureReasonProperty: "veracity_failure_reason",
+        normalizedPhoneProperty: "veracity_normalized_phone",
+        storeNormalizedPhone: false,
+        maxConcurrentWorkers: 5,
+      }
+    );
+  } catch (error) {
+    console.error("Get mappings error:", error.message);
+    throw error;
+  }
 }
 
 async function getAccessToken(portalId) {
@@ -552,19 +641,26 @@ async function getAccessToken(portalId) {
 
     console.log("Generating new access token");
 
-    const tokenData = await new Promise((resolve, reject) => {
-      db.get(
-        `SELECT * FROM oauth_tokens WHERE portalId = ?`,
-        [portalId],
-        (err, row) => {
-          if (err) {
-            reject(err);
-          } else {
-            resolve(row);
-          }
-        },
-      );
-    });
+    // const tokenData = await new Promise((resolve, reject) => {
+    //   db.get(
+    //     `SELECT * FROM oauth_tokens WHERE portalId = ?`,
+    //     [portalId],
+    //     (err, row) => {
+    //       if (err) {
+    //         reject(err);
+    //       } else {
+    //         resolve(row);
+    //       }
+    //     },
+    //   );
+    // });
+
+    const result = await db.query(
+      `SELECT * FROM oauth_tokens WHERE portalId = $1`,
+      [portalId],
+    );
+
+    const tokenData = result.rows[0];
 
     if (!tokenData) {
       throw new Error("No OAuth token found for portal");
@@ -602,25 +698,46 @@ async function getAccessToken(portalId) {
   }
 }
 
+// async function checkRateLimit(portalId, limitPerHour) {
+//   return new Promise((resolve, reject) => {
+//     db.get(
+//       `
+//       SELECT COUNT(*) as total
+//       FROM validation_logs
+//       WHERE portalId = ?
+//       AND createdAt >= datetime('now', '-1 hour')
+//       `,
+//       [portalId],
+//       (err, row) => {
+//         if (err) {
+//           reject(err);
+//         } else {
+//           resolve(row.total < Number(limitPerHour));
+//         }
+//       },
+//     );
+//   });
+// }
+
 async function checkRateLimit(portalId, limitPerHour) {
-  return new Promise((resolve, reject) => {
-    db.get(
+  try {
+    const result = await db.query(
       `
       SELECT COUNT(*) as total
       FROM validation_logs
-      WHERE portalId = ?
-      AND createdAt >= datetime('now', '-1 hour')
+      WHERE portalId = $1
+      AND createdAt >= NOW() - INTERVAL '1 hour'
       `,
       [portalId],
-      (err, row) => {
-        if (err) {
-          reject(err);
-        } else {
-          resolve(row.total < Number(limitPerHour));
-        }
-      },
     );
-  });
+
+    const total = Number(result.rows[0].total);
+
+    return total < Number(limitPerHour);
+  } catch (error) {
+    console.error("Rate limit check failed:", error.message);
+    throw error;
+  }
 }
 
 function checkRequestsPerSecond(portalId, limit) {
@@ -672,50 +789,109 @@ function checkRequestsPerSecond(portalId, limit) {
 //   });
 // }
 
-function cleanupOldLogs() {
-  db.all(`SELECT portalId, retentionDays FROM mappings`, [], (err, rows) => {
-    if (err) {
-      console.error("Cleanup fetch failed:", err.message);
+// function cleanupOldLogs() {
+//   db.all(`SELECT portalId, retentionDays FROM mappings`, [], (err, rows) => {
+//     if (err) {
+//       console.error("Cleanup fetch failed:", err.message);
 
-      return;
+//       return;
+//     }
+
+//     rows.forEach((row) => {
+//       db.run(
+//         `
+//           DELETE FROM validation_logs
+//           WHERE portalId = ?
+//           AND createdAt < datetime(
+//             'now',
+//             '-' || ? || ' days'
+//           )
+//         `,
+//         [row.portalId, row.retentionDays],
+//       );
+
+//       db.run(
+//         `
+//           DELETE FROM audit_logs
+//           WHERE portalId = ?
+//           AND createdAt < datetime(
+//             'now',
+//             '-' || ? || ' days'
+//           )
+//         `,
+//         [row.portalId, row.retentionDays],
+//         (deleteErr) => {
+//           if (deleteErr) {
+//             console.error("Cleanup delete failed:", deleteErr.message);
+//           } else {
+//             console.log(`Old logs cleaned for portal ${row.portalId}`);
+//           }
+//         },
+//       );
+//     });
+//   });
+// }
+
+async function cleanupOldLogs() {
+  try {
+    const result = await db.query(`
+      SELECT portalId, retentionDays
+      FROM mappings
+    `);
+
+    const rows = result.rows;
+
+    for (const row of rows) {
+      await db.query(
+        `
+        DELETE FROM validation_logs
+        WHERE portalId = $1
+        AND createdAt < NOW() - ($2 || ' days')::INTERVAL
+        `,
+        [row.portalId, row.retentionDays],
+      );
+
+      await db.query(
+        `
+        DELETE FROM audit_logs
+        WHERE portalId = $1
+        AND createdAt < NOW() - ($2 || ' days')::INTERVAL
+        `,
+        [row.portalId, row.retentionDays],
+      );
+
+      console.log(`Old logs cleaned for portal ${row.portalId}`);
     }
-
-    rows.forEach((row) => {
-      db.run(
-        `
-          DELETE FROM validation_logs
-          WHERE portalId = ?
-          AND createdAt < datetime(
-            'now',
-            '-' || ? || ' days'
-          )
-        `,
-        [row.portalId, row.retentionDays],
-      );
-
-      db.run(
-        `
-          DELETE FROM audit_logs
-          WHERE portalId = ?
-          AND createdAt < datetime(
-            'now',
-            '-' || ? || ' days'
-          )
-        `,
-        [row.portalId, row.retentionDays],
-        (deleteErr) => {
-          if (deleteErr) {
-            console.error("Cleanup delete failed:", deleteErr.message);
-          } else {
-            console.log(`Old logs cleaned for portal ${row.portalId}`);
-          }
-        },
-      );
-    });
-  });
+  } catch (error) {
+    console.error("Cleanup failed:", error.message);
+  }
 }
 
-function createAuditLog(
+// function createAuditLog(
+//   portalId,
+//   contactId,
+//   action,
+//   status,
+//   message,
+//   carrier = "",
+// ) {
+//   db.run(
+//     `
+//     INSERT INTO audit_logs (
+//       portalId,
+//       contactId,
+//       action,
+//       status,
+//       message,
+//       carrier
+//     )
+//     VALUES (?, ?, ?, ?, ?, ?)
+//   `,
+//     [portalId, contactId, action, status, message, carrier],
+//   );
+// }
+
+async function createAuditLog(
   portalId,
   contactId,
   action,
@@ -723,20 +899,24 @@ function createAuditLog(
   message,
   carrier = "",
 ) {
-  db.run(
-    `
-    INSERT INTO audit_logs (
-      portalId,
-      contactId,
-      action,
-      status,
-      message,
-      carrier
-    )
-    VALUES (?, ?, ?, ?, ?, ?)
-  `,
-    [portalId, contactId, action, status, message, carrier],
-  );
+  try {
+    await db.query(
+      `
+      INSERT INTO audit_logs (
+        portalId,
+        contactId,
+        action,
+        status,
+        message,
+        carrier
+      )
+      VALUES ($1, $2, $3, $4, $5, $6)
+      `,
+      [portalId, contactId, action, status, message, carrier],
+    );
+  } catch (error) {
+    console.error("Audit log insert failed:", error.message);
+  }
 }
 
 function wait(ms) {
@@ -1110,7 +1290,9 @@ app.post("/validate-phone", async (req, res) => {
 
     console.log("ALREADY VALIDATED:", alreadyValidated);
 
-    const overwriteEnabled = String(propertyMappings.overwriteExisting) === "1";
+    // const overwriteEnabled = String(propertyMappings.overwriteExisting) === "1";
+
+    const overwriteEnabled = propertyMappings.overwriteExisting === true;
 
     console.log("OVERWRITE:", overwriteEnabled);
 
@@ -1234,8 +1416,11 @@ app.post("/validate-phone", async (req, res) => {
     //   normalizedPhone
     // )
 
+    // const shouldStoreNormalized =
+    //   String(propertyMappings.storeNormalizedPhone) === "1" ||
+    //   propertyMappings.storeNormalizedPhone === true;
+
     const shouldStoreNormalized =
-      String(propertyMappings.storeNormalizedPhone) === "1" ||
       propertyMappings.storeNormalizedPhone === true;
 
     if (
@@ -1277,9 +1462,17 @@ app.post("/validate-phone", async (req, res) => {
       data?.data?.carrier_name || "",
     );
 
-    db.run(
-      `INSERT INTO validation_logs (portalId)
-      VALUES (?)`,
+    // db.run(
+    //   `INSERT INTO validation_logs (portalId)
+    //   VALUES (?)`,
+    //   [portalId],
+    // );
+
+    await db.query(
+      `
+      INSERT INTO validation_logs (portalId)
+      VALUES ($1)
+       `,
       [portalId],
     );
 
@@ -1428,16 +1621,30 @@ app.post("/bulk-validate", async (req, res) => {
 
     batchJob.status = "running";
 
-    db.run(
-      `INSERT INTO batch_jobs (
-          id,
-          portalId,
-          listId,
-          status,
-          total
-          )
-          VALUES (?, ?, ?, ?, ?)
-          `,
+    // db.run(
+    //   `INSERT INTO batch_jobs (
+    //       id,
+    //       portalId,
+    //       listId,
+    //       status,
+    //       total
+    //       )
+    //       VALUES (?, ?, ?, ?, ?)
+    //       `,
+    //   [batchJobId, portalId, listId, "running", batchJob.total],
+    // );
+
+    await db.query(
+      `
+      INSERT INTO batch_jobs (
+      id,
+      portalId,
+      listId,
+      status,
+      total
+      )
+      VALUES ($1, $2, $3, $4, $5)
+      `,
       [batchJobId, portalId, listId, "running", batchJob.total],
     );
 
@@ -1606,8 +1813,11 @@ app.post("/bulk-validate", async (req, res) => {
             //   normalizedPhone
             // )
 
+            // const shouldStoreNormalized =
+            //   String(propertyMappings.storeNormalizedPhone) === "1" ||
+            //   propertyMappings.storeNormalizedPhone === true;
+
             const shouldStoreNormalized =
-              String(propertyMappings.storeNormalizedPhone) === "1" ||
               propertyMappings.storeNormalizedPhone === true;
 
             if (
@@ -1631,9 +1841,17 @@ app.post("/bulk-validate", async (req, res) => {
               hubspotProperties,
             );
 
-            db.run(
-              `INSERT INTO validation_logs (portalId)
-          VALUES (?)`,
+            // db.run(
+            //   `INSERT INTO validation_logs (portalId)
+            //   VALUES (?)`,
+            //   [portalId],
+            // );
+
+            await db.query(
+              `
+              INSERT INTO validation_logs (portalId)
+              VALUES ($1)
+              `,
               [portalId],
             );
 
@@ -1646,15 +1864,34 @@ app.post("/bulk-validate", async (req, res) => {
               batchJob.invalid++;
             }
 
-            db.run(
-              `UPDATE batch_jobs
-          SET
-          processed = ?,
-          valid = ?,
-          invalid = ?,
-          failed = ?
-          WHERE id = ?
-          `,
+            // db.run(
+            //   `UPDATE batch_jobs
+            //   SET
+            //   processed = ?,
+            //   valid = ?,
+            //   invalid = ?,
+            //   failed = ?
+            //   WHERE id = ?
+            //   `,
+            //   [
+            //     batchJob.processed,
+            //     batchJob.valid,
+            //     batchJob.invalid,
+            //     batchJob.failed,
+            //     batchJobId,
+            //   ],
+            // );
+
+            await db.query(
+              `
+              UPDATE batch_jobs
+              SET
+              processed = $1,
+              valid = $2,
+              invalid = $3,
+              failed = $4
+              WHERE id = $5
+              `,
               [
                 batchJob.processed,
                 batchJob.valid,
@@ -1680,10 +1917,19 @@ app.post("/bulk-validate", async (req, res) => {
 
     batchJob.status = "completed";
 
-    db.run(
-      `UPDATE batch_jobs
-      SET status = ?
-      WHERE id = ?
+    // db.run(
+    //   `UPDATE batch_jobs
+    //   SET status = ?
+    //   WHERE id = ?
+    //   `,
+    //   ["completed", batchJobId],
+    // );
+
+    await db.query(
+      `
+      UPDATE batch_jobs
+      SET status = $1
+      WHERE id = $2
       `,
       ["completed", batchJobId],
     );
@@ -1709,44 +1955,77 @@ app.post("/bulk-validate", async (req, res) => {
 
 app.get("/settings", validatePortalAccess, async (req, res) => {
   try {
-    db.get(
-      `SELECT * FROM mappings WHERE portalId = ?`,
-      // ["default"],
+    // db.get(
+    //   `SELECT * FROM mappings WHERE portalId = ?`,
+    //   // ["default"],
+    //   [req.query.portalId],
+    //   (err, row) => {
+    //     if (err) {
+    //       console.error(err);
+
+    //       return sendError(res, 500, "Database error");
+    //     }
+
+    //     if (!row) {
+    //       return sendSuccess(res, "No settings found", {
+    //         mappings: {
+    //           phoneProperty: "phone",
+    //           validationStatusProperty: "veracity_validation_status",
+    //           carrierProperty: "veracity_carrier",
+    //           validatedAtProperty: "veracity_validated_at",
+    //           overwriteExisting: true,
+    //           veracityApiKey: "",
+    //           rateLimitPerHour: 100,
+    //           retentionDays: 30,
+    //           failureReasonProperty: "veracity_failure_reason",
+    //           normalizedPhoneProperty: "veracity_normalized_phone",
+    //           storeNormalizedPhone: false,
+    //         },
+    //       });
+    //     }
+
+    //     if (row?.veracityApiKey) {
+    //       row.veracityApiKey = decrypt(row.veracityApiKey);
+    //     }
+
+    //     return sendSuccess(res, "Settings fetched successfully", {
+    //       mappings: row,
+    //     });
+    //   },
+    // );
+
+    const result = await db.query(
+      `SELECT * FROM mappings WHERE portalId = $1`,
       [req.query.portalId],
-      (err, row) => {
-        if (err) {
-          console.error(err);
-
-          return sendError(res, 500, "Database error");
-        }
-
-        if (!row) {
-          return sendSuccess(res, "No settings found", {
-            mappings: {
-              phoneProperty: "phone",
-              validationStatusProperty: "veracity_validation_status",
-              carrierProperty: "veracity_carrier",
-              validatedAtProperty: "veracity_validated_at",
-              overwriteExisting: true,
-              veracityApiKey: "",
-              rateLimitPerHour: 100,
-              retentionDays: 30,
-              failureReasonProperty: "veracity_failure_reason",
-              normalizedPhoneProperty: "veracity_normalized_phone",
-              storeNormalizedPhone: false,
-            },
-          });
-        }
-
-        if (row?.veracityApiKey) {
-          row.veracityApiKey = decrypt(row.veracityApiKey);
-        }
-
-        return sendSuccess(res, "Settings fetched successfully", {
-          mappings: row,
-        });
-      },
     );
+
+    const row = result.rows[0];
+
+    if (!row) {
+      return sendSuccess(res, "No settings found", {
+        mappings: {
+          phoneProperty: "phone",
+          validationStatusProperty: "veracity_validation_status",
+          carrierProperty: "veracity_carrier",
+          validatedAtProperty: "veracity_validated_at",
+          overwriteExisting: true,
+          veracityApiKey: "",
+          rateLimitPerHour: 100,
+          retentionDays: 30,
+          failureReasonProperty: "veracity_failure_reason",
+          normalizedPhoneProperty: "veracity_normalized_phone",
+          storeNormalizedPhone: false,
+        },
+      });
+    }
+
+    if (row?.veracityApiKey) {
+      row.veracityApiKey = decrypt(row.veracityApiKey);
+    }
+
+    return sendSuccess(res, "Settings fetched successfully", {
+      mappings: row,
+    });
   } catch (error) {
     console.error(error);
 
@@ -1776,84 +2055,169 @@ app.post("/settings", validatePortalAccess, async (req, res) => {
       maxConcurrentWorkers,
     } = req.body;
 
-    db.run(
-      `
-      INSERT INTO mappings (
-        portalId,
-        phoneProperty,
-        validationStatusProperty,
-        carrierProperty,
-        validatedAtProperty,
-        overwriteExisting,
-        veracityApiKey,
-        rateLimitPerHour,
-        retentionDays,
-        failureReasonProperty,
-        normalizedPhoneProperty,
-        storeNormalizedPhone,
-        maxRequestsPerSecond,
-        maxConcurrentWorkers
-      )
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    // db.run(
+    //   `
+    //   INSERT INTO mappings (
+    //     portalId,
+    //     phoneProperty,
+    //     validationStatusProperty,
+    //     carrierProperty,
+    //     validatedAtProperty,
+    //     overwriteExisting,
+    //     veracityApiKey,
+    //     rateLimitPerHour,
+    //     retentionDays,
+    //     failureReasonProperty,
+    //     normalizedPhoneProperty,
+    //     storeNormalizedPhone,
+    //     maxRequestsPerSecond,
+    //     maxConcurrentWorkers
+    //   )
+    //   VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
 
-      ON CONFLICT(portalId)
-      DO UPDATE SET
-        phoneProperty = excluded.phoneProperty,
-        validationStatusProperty =
-          excluded.validationStatusProperty,
-        carrierProperty = excluded.carrierProperty,
-        validatedAtProperty =
-          excluded.validatedAtProperty,
-          overwriteExisting = excluded.overwriteExisting,
-          veracityApiKey =
-          excluded.veracityApiKey,
-          rateLimitPerHour =
-          excluded.rateLimitPerHour,
-          retentionDays =
-          excluded.retentionDays,
-          failureReasonProperty =
-          excluded.failureReasonProperty,
-          normalizedPhoneProperty =
-          excluded.normalizedPhoneProperty,
-          storeNormalizedPhone =
-          excluded.storeNormalizedPhone,
-          maxRequestsPerSecond =
-          excluded.maxRequestsPerSecond,
-          maxConcurrentWorkers =
-          excluded.maxConcurrentWorkers
-      `,
-      [
-        // "default",
-        portalId,
-        phoneProperty,
-        validationStatusProperty,
-        carrierProperty,
-        validatedAtProperty,
-        overwriteExisting === true ? 1 : 0,
-        // veracityApiKey,
-        encrypt(veracityApiKey),
-        rateLimitPerHour,
-        retentionDays,
-        failureReasonProperty,
-        normalizedPhoneProperty,
-        storeNormalizedPhone === true ? 1 : 0,
-        maxRequestsPerSecond,
-        maxConcurrentWorkers,
-      ],
-      function (err) {
-        if (err) {
-          console.error(err);
+    //   ON CONFLICT(portalId)
+    //   DO UPDATE SET
+    //     phoneProperty = excluded.phoneProperty,
+    //     validationStatusProperty =
+    //       excluded.validationStatusProperty,
+    //     carrierProperty = excluded.carrierProperty,
+    //     validatedAtProperty =
+    //       excluded.validatedAtProperty,
+    //       overwriteExisting = excluded.overwriteExisting,
+    //       veracityApiKey =
+    //       excluded.veracityApiKey,
+    //       rateLimitPerHour =
+    //       excluded.rateLimitPerHour,
+    //       retentionDays =
+    //       excluded.retentionDays,
+    //       failureReasonProperty =
+    //       excluded.failureReasonProperty,
+    //       normalizedPhoneProperty =
+    //       excluded.normalizedPhoneProperty,
+    //       storeNormalizedPhone =
+    //       excluded.storeNormalizedPhone,
+    //       maxRequestsPerSecond =
+    //       excluded.maxRequestsPerSecond,
+    //       maxConcurrentWorkers =
+    //       excluded.maxConcurrentWorkers
+    //   `,
+    //   [
+    //     // "default",
+    //     portalId,
+    //     phoneProperty,
+    //     validationStatusProperty,
+    //     carrierProperty,
+    //     validatedAtProperty,
+    //     overwriteExisting === true ? 1 : 0,
+    //     // veracityApiKey,
+    //     encrypt(veracityApiKey),
+    //     rateLimitPerHour,
+    //     retentionDays,
+    //     failureReasonProperty,
+    //     normalizedPhoneProperty,
+    //     storeNormalizedPhone === true ? 1 : 0,
+    //     maxRequestsPerSecond,
+    //     maxConcurrentWorkers,
+    //   ],
+    //   function (err) {
+    //     if (err) {
+    //       console.error(err);
 
-          return sendError(res, 500, "Failed to save settings");
-        }
+    //       return sendError(res, 500, "Failed to save settings");
+    //     }
 
-        console.log("DB SAVE SUCCESS");
-        console.log(this.changes);
-        console.log(this.lastID);
+    //     console.log("DB SAVE SUCCESS");
+    //     console.log(this.changes);
+    //     console.log(this.lastID);
 
-        return sendSuccess(res, "Settings saved successfully");
-      },
-    );
+    //     return sendSuccess(res, "Settings saved successfully");
+    //   },
+    // );
+
+    try {
+      await db.query(
+        `
+    INSERT INTO mappings (
+      portalId,
+      phoneProperty,
+      validationStatusProperty,
+      carrierProperty,
+      validatedAtProperty,
+      overwriteExisting,
+      veracityApiKey,
+      rateLimitPerHour,
+      retentionDays,
+      failureReasonProperty,
+      normalizedPhoneProperty,
+      storeNormalizedPhone,
+      maxRequestsPerSecond,
+      maxConcurrentWorkers
+    )
+    VALUES (
+      $1, $2, $3, $4, $5,
+      $6, $7, $8, $9, $10,
+      $11, $12, $13, $14
+    )
+
+    ON CONFLICT (portalId)
+    DO UPDATE SET
+      phoneProperty = EXCLUDED.phoneProperty,
+      validationStatusProperty =
+        EXCLUDED.validationStatusProperty,
+      carrierProperty = EXCLUDED.carrierProperty,
+      validatedAtProperty =
+        EXCLUDED.validatedAtProperty,
+      overwriteExisting =
+        EXCLUDED.overwriteExisting,
+      veracityApiKey =
+        EXCLUDED.veracityApiKey,
+      rateLimitPerHour =
+        EXCLUDED.rateLimitPerHour,
+      retentionDays =
+        EXCLUDED.retentionDays,
+      failureReasonProperty =
+        EXCLUDED.failureReasonProperty,
+      normalizedPhoneProperty =
+        EXCLUDED.normalizedPhoneProperty,
+      storeNormalizedPhone =
+        EXCLUDED.storeNormalizedPhone,
+      maxRequestsPerSecond =
+        EXCLUDED.maxRequestsPerSecond,
+      maxConcurrentWorkers =
+        EXCLUDED.maxConcurrentWorkers
+    `,
+        [
+          portalId,
+          phoneProperty,
+          validationStatusProperty,
+          carrierProperty,
+          validatedAtProperty,
+
+          overwriteExisting === true,
+
+          encrypt(veracityApiKey),
+
+          rateLimitPerHour,
+          retentionDays,
+
+          failureReasonProperty,
+          normalizedPhoneProperty,
+
+          storeNormalizedPhone === true,
+
+          maxRequestsPerSecond,
+          maxConcurrentWorkers,
+        ],
+      );
+
+      console.log("DB SAVE SUCCESS");
+
+      return sendSuccess(res, "Settings saved successfully");
+    } catch (err) {
+      console.error(err);
+
+      return sendError(res, 500, "Failed to save settings");
+    }
   } catch (error) {
     console.error(error);
 
@@ -1944,22 +2308,41 @@ app.get("/hubspot-lists", async (req, res) => {
   }
 });
 
-app.get("/batch-job/:id", (req, res) => {
-  db.get(
-    `
+app.get("/batch-job/:id", async (req, res) => {
+  // db.get(
+  //   `
+  //   SELECT *
+  //   FROM batch_jobs
+  //   WHERE id = ?
+  // `,
+  //   [req.params.id],
+  //   (err, row) => {
+  //     if (err) {
+  //       return sendError(res, 500, "Failed to fetch batch job");
+  //     }
+
+  //     return sendSuccess(res, "Batch job fetched", row);
+  //   },
+  // );
+
+  try {
+    const result = await db.query(
+      `
     SELECT *
     FROM batch_jobs
-    WHERE id = ?
-  `,
-    [req.params.id],
-    (err, row) => {
-      if (err) {
-        return sendError(res, 500, "Failed to fetch batch job");
-      }
+    WHERE id = $1
+    `,
+      [req.params.id],
+    );
 
-      return sendSuccess(res, "Batch job fetched", row);
-    },
-  );
+    const row = result.rows[0];
+
+    return sendSuccess(res, "Batch job fetched", row);
+  } catch (error) {
+    console.error(error);
+
+    return sendError(res, 500, "Failed to fetch batch job");
+  }
 });
 
 app.get("/metrics", (req, res) => {
