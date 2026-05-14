@@ -2284,11 +2284,6 @@ app.post("/settings", validatePortalAccess, async (req, res) => {
 
   console.log("Settings update request received");
 
-  console.log("BULK SETTINGS BODY:", {
-    bulkValidationStatusProperty,
-    bulkValidationSummaryProperty,
-    bulkValidatedAtProperty,
-  });
   try {
     const {
       portalId,
@@ -2312,6 +2307,12 @@ app.post("/settings", validatePortalAccess, async (req, res) => {
       bulkValidationSummaryProperty,
       bulkValidatedAtProperty,
     } = req.body;
+
+    console.log("BULK SETTINGS BODY:", {
+      bulkValidationStatusProperty,
+      bulkValidationSummaryProperty,
+      bulkValidatedAtProperty,
+    });
 
     // db.run(
     //   `
@@ -2563,6 +2564,8 @@ app.get("/hubspot-lists", async (req, res) => {
         },
       },
     );
+
+    console.log("HUBSPOT RAW LISTS", response.data);
 
     // const data = await response.json();
 
