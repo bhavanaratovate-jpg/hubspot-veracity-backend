@@ -625,7 +625,10 @@ async function getMappings(portalId) {
     overwriteexisting AS "overwriteExisting",
     failurereasonproperty AS "failureReasonProperty",
     normalizedphoneproperty AS "normalizedPhoneProperty",
-    storenormalizedphone AS "storeNormalizedPhone"
+    storenormalizedphone AS "storeNormalizedPhone",
+    bulkveracityapikey AS "bulkVeracityApiKey",
+bulkratelimitperhour AS "bulkRateLimitPerHour",
+bulkretentiondays AS "bulkRetentionDays"
   FROM mappings
   WHERE portalid = $1
   `,
@@ -647,6 +650,9 @@ async function getMappings(portalId) {
         normalizedPhoneProperty: "veracity_normalized_phone",
         storeNormalizedPhone: false,
         maxConcurrentWorkers: 5,
+        bulkVeracityApiKey: "",
+        bulkRateLimitPerHour: 100,
+        bulkRetentionDays: 30,
       }
     );
   } catch (error) {
@@ -1723,7 +1729,9 @@ app.post("/bulk-validate", async (req, res) => {
           // for (const member of listData.results) {
           const allowed = await checkRateLimit(
             portalId,
-            propertyMappings.rateLimitPerHour,
+            // propertyMappings.rateLimitPerHour,
+            propertyMappings.bulkRateLimitPerHour ||
+              propertyMappings.rateLimitPerHour,
             // propertyMappings.ratelimitperhour,
           );
 
@@ -1790,7 +1798,11 @@ app.post("/bulk-validate", async (req, res) => {
             let decryptedApiKey = "";
 
             try {
-              decryptedApiKey = decrypt(propertyMappings.veracityApiKey);
+              // decryptedApiKey = decrypt(propertyMappings.veracityApiKey);
+              decryptedApiKey = decrypt(
+                propertyMappings.bulkVeracityApiKey ||
+                  propertyMappings.veracityApiKey,
+              );
             } catch (e) {
               // return sendError(res, 400, "Invalid encrypted API key");
 
@@ -2066,7 +2078,10 @@ app.get("/settings", validatePortalAccess, async (req, res) => {
     overwriteexisting AS "overwriteExisting",
     failurereasonproperty AS "failureReasonProperty",
     normalizedphoneproperty AS "normalizedPhoneProperty",
-    storenormalizedphone AS "storeNormalizedPhone"
+    storenormalizedphone AS "storeNormalizedPhone",
+    bulkveracityapikey AS "bulkVeracityApiKey",
+bulkratelimitperhour AS "bulkRateLimitPerHour",
+bulkretentiondays AS "bulkRetentionDays"
   FROM mappings
   WHERE portalid = $1
   `,
@@ -2089,12 +2104,19 @@ app.get("/settings", validatePortalAccess, async (req, res) => {
           failureReasonProperty: "veracity_failure_reason",
           normalizedPhoneProperty: "veracity_normalized_phone",
           storeNormalizedPhone: false,
+          bulkVeracityApiKey: "",
+          bulkRateLimitPerHour: 100,
+          bulkRetentionDays: 30,
         },
       });
     }
 
     if (row?.veracityApiKey) {
       row.veracityApiKey = decrypt(row.veracityApiKey);
+    }
+
+    if (row?.bulkVeracityApiKey) {
+      row.bulkVeracityApiKey = decrypt(row.bulkVeracityApiKey);
     }
 
     return sendSuccess(res, "Settings fetched successfully", {
@@ -2127,6 +2149,9 @@ app.post("/settings", validatePortalAccess, async (req, res) => {
       storeNormalizedPhone,
       maxRequestsPerSecond,
       maxConcurrentWorkers,
+      bulkVeracityApiKey,
+      bulkRateLimitPerHour,
+      bulkRetentionDays,
     } = req.body;
 
     // db.run(
@@ -2225,12 +2250,15 @@ app.post("/settings", validatePortalAccess, async (req, res) => {
       normalizedPhoneProperty,
       storeNormalizedPhone,
       maxRequestsPerSecond,
-      maxConcurrentWorkers
+      maxConcurrentWorkers,
+      bulkVeracityApiKey,
+bulkRateLimitPerHour,
+bulkRetentionDays
     )
     VALUES (
       $1, $2, $3, $4, $5,
       $6, $7, $8, $9, $10,
-      $11, $12, $13, $14
+      $11, $12, $13, $14, $15, $16, $17
     )
 
     ON CONFLICT (portalid)
@@ -2258,7 +2286,13 @@ app.post("/settings", validatePortalAccess, async (req, res) => {
       maxRequestsPerSecond =
         EXCLUDED.maxRequestsPerSecond,
       maxConcurrentWorkers =
-        EXCLUDED.maxConcurrentWorkers
+        EXCLUDED.maxConcurrentWorkers,
+        bulkVeracityApiKey =
+  EXCLUDED.bulkVeracityApiKey,
+bulkRateLimitPerHour =
+  EXCLUDED.bulkRateLimitPerHour,
+bulkRetentionDays =
+  EXCLUDED.bulkRetentionDays
     `,
         [
           portalId,
@@ -2281,6 +2315,11 @@ app.post("/settings", validatePortalAccess, async (req, res) => {
 
           maxRequestsPerSecond,
           maxConcurrentWorkers,
+          encrypt(bulkVeracityApiKey),
+
+          bulkRateLimitPerHour,
+
+          bulkRetentionDays,
         ],
       );
 
