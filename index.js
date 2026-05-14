@@ -606,8 +606,28 @@ function sendSuccess(res, message, data = {}) {
 async function getMappings(portalId) {
   try {
     const result = await db.query(
-      `SELECT * FROM mappings WHERE portalId = $1`,
-      [portalId],
+      // `SELECT * FROM mappings WHERE portalId = $1`,
+      // [portalId],
+
+      `
+  SELECT
+    id,
+    portalid AS "portalId",
+    phoneproperty AS "phoneProperty",
+    validationstatusproperty AS "validationStatusProperty",
+    carrierproperty AS "carrierProperty",
+    validatedatproperty AS "validatedAtProperty",
+    veracityapikey AS "veracityApiKey",
+    ratelimitperhour AS "rateLimitPerHour",
+    retentiondays AS "retentionDays",
+    overwriteexisting AS "overwriteExisting",
+    failurereasonproperty AS "failureReasonProperty",
+    normalizedphoneproperty AS "normalizedPhoneProperty",
+    storenormalizedphone AS "storeNormalizedPhone"
+  FROM mappings
+  WHERE portalid = $1
+  `,
+      [portalid],
     );
 
     const row = result.rows[0];
@@ -734,7 +754,7 @@ async function checkRateLimit(portalId, limitPerHour) {
       SELECT COUNT(*) as total
       FROM validation_logs
       WHERE portalId = $1
-      AND createdAt >= NOW() - INTERVAL '1 hour'
+      AND createdat >= NOW() - INTERVAL '1 hour'
       `,
       [portalId],
     );
@@ -854,7 +874,7 @@ async function cleanupOldLogs() {
         `
         DELETE FROM validation_logs
         WHERE portalId = $1
-        AND createdAt < NOW() - ($2 || ' days')::INTERVAL
+        AND createdat < NOW() - ($2 || ' days')::INTERVAL
         `,
         [row.portalId, row.retentionDays],
       );
@@ -863,7 +883,7 @@ async function cleanupOldLogs() {
         `
         DELETE FROM audit_logs
         WHERE portalId = $1
-        AND createdAt < NOW() - ($2 || ' days')::INTERVAL
+        AND createdat < NOW() - ($2 || ' days')::INTERVAL
         `,
         [row.portalId, row.retentionDays],
       );
@@ -1235,7 +1255,8 @@ app.post("/validate-phone", async (req, res) => {
 
     const allowed = await checkRateLimit(
       portalId,
-      propertyMappings.rateLimitPerHour,
+      // propertyMappings.rateLimitPerHour,
+      propertyMappings.ratelimitperhour,
     );
 
     console.log("STEP 3", allowed);
@@ -1684,7 +1705,8 @@ app.post("/bulk-validate", async (req, res) => {
           // for (const member of listData.results) {
           const allowed = await checkRateLimit(
             portalId,
-            propertyMappings.rateLimitPerHour,
+            // propertyMappings.rateLimitPerHour,
+            propertyMappings.ratelimitperhour,
           );
 
           if (!allowed) {
@@ -2010,8 +2032,28 @@ app.get("/settings", validatePortalAccess, async (req, res) => {
     // );
 
     const result = await db.query(
-      `SELECT * FROM mappings WHERE portalId = $1`,
-      [req.query.portalId],
+      // `SELECT * FROM mappings WHERE portalId = $1`,
+      // [req.query.portalId],
+
+      `
+  SELECT
+    id,
+    portalid AS "portalId",
+    phoneproperty AS "phoneProperty",
+    validationstatusproperty AS "validationStatusProperty",
+    carrierproperty AS "carrierProperty",
+    validatedatproperty AS "validatedAtProperty",
+    veracityapikey AS "veracityApiKey",
+    ratelimitperhour AS "rateLimitPerHour",
+    retentiondays AS "retentionDays",
+    overwriteexisting AS "overwriteExisting",
+    failurereasonproperty AS "failureReasonProperty",
+    normalizedphoneproperty AS "normalizedPhoneProperty",
+    storenormalizedphone AS "storeNormalizedPhone"
+  FROM mappings
+  WHERE portalid = $1
+  `,
+      [portalid],
     );
 
     const row = result.rows[0];
