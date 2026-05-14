@@ -628,7 +628,10 @@ async function getMappings(portalId) {
     storenormalizedphone AS "storeNormalizedPhone",
     bulkveracityapikey AS "bulkVeracityApiKey",
 bulkratelimitperhour AS "bulkRateLimitPerHour",
-bulkretentiondays AS "bulkRetentionDays"
+bulkretentiondays AS "bulkRetentionDays",
+bulkvalidationstatusproperty AS "bulkValidationStatusProperty",
+bulkvalidationsummaryproperty AS "bulkValidationSummaryProperty",
+bulkvalidatedatproperty AS "bulkValidatedAtProperty"
   FROM mappings
   WHERE portalid = $1
   `,
@@ -1763,6 +1766,8 @@ app.post("/bulk-validate", async (req, res) => {
 
             const contactData = await contactResponse.json();
 
+            console.log("CONTACT PROPERTIES:", contactData.properties);
+
             // const phone = contactData?.properties?.phone;
             const phone =
               contactData?.properties?.[propertyMappings.phoneProperty];
@@ -1857,13 +1862,23 @@ app.post("/bulk-validate", async (req, res) => {
 
               //  [propertyMappings.failureReasonProperty]: "",
 
-              bulk_validation_status: "completed",
+              // bulk_validation_status: "completed",
 
-              bulk_validation_summary: veracityData.success
-                ? "Phone validated successfully"
-                : "Invalid phone number detected",
+              // bulk_validation_summary: veracityData.success
+              //   ? "Phone validated successfully"
+              //   : "Invalid phone number detected",
 
-              bulk_validated_at: new Date().toISOString(),
+              // bulk_validated_at: new Date().toISOString(),
+
+              [propertyMappings.bulkValidationStatusProperty]: "completed",
+
+              [propertyMappings.bulkValidationSummaryProperty]:
+                veracityData.success
+                  ? "Phone validated successfully"
+                  : "Invalid phone number detected",
+
+              [propertyMappings.bulkValidatedAtProperty]:
+                new Date().toISOString(),
             };
 
             // if (
@@ -2081,8 +2096,12 @@ app.get("/settings", validatePortalAccess, async (req, res) => {
     storenormalizedphone AS "storeNormalizedPhone",
     bulkveracityapikey AS "bulkVeracityApiKey",
 bulkratelimitperhour AS "bulkRateLimitPerHour",
-bulkretentiondays AS "bulkRetentionDays"
-  FROM mappings
+bulkretentiondays AS "bulkRetentionDays",
+bulkvalidationstatusproperty AS "bulkValidationStatusProperty",
+
+bulkvalidationsummaryproperty AS "bulkValidationSummaryProperty",
+
+bulkvalidatedatproperty AS "bulkValidatedAtProperty" FROM mappings
   WHERE portalid = $1
   `,
       [req.query.portalId],
@@ -2152,6 +2171,9 @@ app.post("/settings", validatePortalAccess, async (req, res) => {
       bulkVeracityApiKey,
       bulkRateLimitPerHour,
       bulkRetentionDays,
+      bulkValidationStatusProperty,
+      bulkValidationSummaryProperty,
+      bulkValidatedAtProperty,
     } = req.body;
 
     // db.run(
@@ -2253,12 +2275,15 @@ app.post("/settings", validatePortalAccess, async (req, res) => {
       maxConcurrentWorkers,
       bulkVeracityApiKey,
 bulkRateLimitPerHour,
-bulkRetentionDays
+bulkRetentionDays,
+bulkValidationStatusProperty,
+bulkValidationSummaryProperty,
+bulkValidatedAtProperty
     )
     VALUES (
       $1, $2, $3, $4, $5,
       $6, $7, $8, $9, $10,
-      $11, $12, $13, $14, $15, $16, $17
+      $11, $12, $13, $14, $15, $16, $17, $18, $19, $20
     )
 
     ON CONFLICT (portalid)
@@ -2292,7 +2317,13 @@ bulkRetentionDays
 bulkRateLimitPerHour =
   EXCLUDED.bulkRateLimitPerHour,
 bulkRetentionDays =
-  EXCLUDED.bulkRetentionDays
+  EXCLUDED.bulkRetentionDays,
+  bulkValidationStatusProperty =
+ EXCLUDED.bulkValidationStatusProperty,
+bulkValidationSummaryProperty =
+ EXCLUDED.bulkValidationSummaryProperty,
+bulkValidatedAtProperty =
+ EXCLUDED.bulkValidatedAtProperty
     `,
         [
           portalId,
@@ -2320,6 +2351,9 @@ bulkRetentionDays =
           bulkRateLimitPerHour,
 
           bulkRetentionDays,
+          bulkValidationStatusProperty,
+          bulkValidationSummaryProperty,
+          bulkValidatedAtProperty,
         ],
       );
 
