@@ -65,7 +65,9 @@ async function validatePortalAccess(req, res, next) {
   }
 }
 
-const encryptionSecret = process.env.ENCRYPTION_KEY || "test-encryption-key";
+// const encryptionSecret = process.env.ENCRYPTION_KEY || "test-encryption-key";
+
+const encryptionSecret = process.env.ENCRYPTION_KEY;
 
 const ENCRYPTION_KEY = crypto
   .createHash("sha256")
@@ -683,6 +685,12 @@ async function getAccessToken(portalId) {
 
     const data = await response.json();
 
+    console.log("TOKEN RESPONSE:", data);
+
+    if (!data.access_token) {
+      throw new Error("Failed to generate access token");
+    }
+
     cachedAccessToken = data.access_token;
 
     // ✅ expire before actual expiry for safety
@@ -1185,14 +1193,21 @@ app.post("/validate-phone", async (req, res) => {
 
   try {
     // console.log("Fetching contact from HubSpot...");
-    logInfo("Fetching contact from HubSpot", {
-      portalId,
-      contactId,
-    });
 
     // console.log("BODY:", req.body);
 
     console.log("Validation request received");
+
+    contactId = req.body.contactId;
+
+    objectType = req.body.objectType;
+
+    portalId = req.body.portalId;
+
+    logInfo("Fetching contact from HubSpot", {
+      portalId,
+      contactId,
+    });
 
     // ✅ Now using phone_number everywhere
     // const { phone_number, contactId } = req.body;
@@ -1201,13 +1216,7 @@ app.post("/validate-phone", async (req, res) => {
 
     // const portalId = req.body.portalId;
 
-    contactId = req.body.contactId;
-
     // const { objectType } = req.body;
-
-    objectType = req.body.objectType;
-
-    portalId = req.body.portalId;
 
     if (!contactId) {
       return sendError(res, 400, "contactId is required");
@@ -1788,7 +1797,7 @@ app.post("/bulk-validate", async (req, res) => {
 
               [propertyMappings.validatedAtProperty]: new Date().toISOString(),
 
-              // [propertyMappings.failureReasonProperty]: "",
+              //  [propertyMappings.failureReasonProperty]: "",
 
               bulk_validation_status: "completed",
 
@@ -2245,19 +2254,33 @@ app.get("/hubspot-lists", async (req, res) => {
       },
     );
 
-    const data = await response.json();
+    // const data = await response.json();
 
-    console.log("ACTUAL HUBSPOT DATA:", data);
+    // console.log("ACTUAL HUBSPOT DATA:", data);
 
-    const lists = data.results || [];
+    // const lists = data.results || [];
+
+    // if (!response.ok) {
+    //   const errorText = await response.text();
+
+    //   console.error("Failed to fetch lists:", errorText);
+
+    //   return sendError(res, 500, "Failed to fetch HubSpot lists");
+    // }
+
+    const rawText = await response.text();
+
+    console.log("RAW HUBSPOT RESPONSE:", rawText);
+
+    const data = rawText ? JSON.parse(rawText) : {};
 
     if (!response.ok) {
-      const errorText = await response.text();
-
-      console.error("Failed to fetch lists:", errorText);
+      console.error("Failed to fetch lists:", data);
 
       return sendError(res, 500, "Failed to fetch HubSpot lists");
     }
+
+    const lists = data.results || [];
 
     // const data = await response.json();
 
