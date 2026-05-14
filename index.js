@@ -1666,6 +1666,8 @@ app.post("/bulk-validate", async (req, res) => {
 
     const bulkMappings = await getBulkMappings(portalId);
 
+    console.log("BULK MAPPINGS:", bulkMappings);
+
     if (!listId) {
       return sendError(res, 400, "listId is required");
     }
@@ -2276,6 +2278,12 @@ app.post("/settings", validatePortalAccess, async (req, res) => {
   // console.log(req.body);
 
   console.log("Settings update request received");
+
+  console.log("BULK SETTINGS BODY:", {
+    bulkValidationStatusProperty,
+    bulkValidationSummaryProperty,
+    bulkValidatedAtProperty,
+  });
   try {
     const {
       portalId,
