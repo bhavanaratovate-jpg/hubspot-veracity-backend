@@ -1225,14 +1225,20 @@ app.post("/validate-phone", async (req, res) => {
     const hubspotObjectType =
       objectType === "companies" ? "companies" : "contacts";
 
+    console.log("STEP 1");
+
     // const propertyMappings = await getMappings();
     // const propertyMappings = await getMappings(req.body.portalId);
     const propertyMappings = await getMappings(portalId);
+
+    console.log("STEP 2", propertyMappings);
 
     const allowed = await checkRateLimit(
       portalId,
       propertyMappings.rateLimitPerHour,
     );
+
+    console.log("STEP 3", allowed);
 
     if (!allowed) {
       return sendError(res, 429, "Rate limit exceeded for this portal");
