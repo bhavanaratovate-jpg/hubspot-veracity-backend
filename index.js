@@ -1806,11 +1806,9 @@ app.post("/bulk-validate", async (req, res) => {
 
             try {
               // decryptedApiKey = decrypt(propertyMappings.veracityApiKey);
-              decryptedApiKey = decrypt(propertyMappings.bulkVeracityApiKey);
-
-              console.log(
-                "BULK API KEY EXISTS:",
-                !!propertyMappings.bulkVeracityApiKey,
+              decryptedApiKey = decrypt(
+                propertyMappings.bulkVeracityApiKey ||
+                  propertyMappings.veracityApiKey,
               );
             } catch (e) {
               // return sendError(res, 400, "Invalid encrypted API key");
