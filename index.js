@@ -271,17 +271,19 @@ app.get("/oauth/callback", async (req, res) => {
     try {
       await db.query(
         `
+    
+
     INSERT INTO oauth_tokens (
-      portalId,
-      accessToken,
-      refreshToken
-    )
+  portalid,
+  accesstoken,
+  refreshtoken
+)
     VALUES ($1, $2, $3)
 
-    ON CONFLICT (portalId)
+    ON CONFLICT (portalid)
     DO UPDATE SET
-      accessToken = EXCLUDED.accessToken,
-      refreshToken = EXCLUDED.refreshToken
+      accesstoken = EXCLUDED.accesstoken,
+      refreshtoken = EXCLUDED.refreshtoken
     `,
         [
           tokenResponse.hub_id,
@@ -680,14 +682,21 @@ async function getAccessToken(portalId) {
     const result = await db.query(
       // `SELECT * FROM oauth_tokens WHERE portalId = $1`,
 
-      `
-  SELECT
-    "portalId" AS "portalId",
-    "accessToken" AS "accessToken",
-    "refreshToken" AS "refreshToken"
-  FROM oauth_tokens
-  WHERE "portalId" = $1
-  `,
+      //     `SELECT
+      //   "portalId" AS "portalId",
+      //   "accessToken" AS "accessToken",
+      //   "refreshToken" AS "refreshToken"
+      // FROM oauth_tokens
+      // WHERE "portalId" = $1
+      // `
+
+      `SELECT
+      portalid AS "portalId",
+      accesstoken AS "accessToken",
+      refreshtoken AS "refreshToken"
+      FROM oauth_tokens
+      WHERE portalid = $1
+      `,
       [portalId],
     );
 
@@ -1264,8 +1273,8 @@ app.post("/validate-phone", async (req, res) => {
 
     const allowed = await checkRateLimit(
       portalId,
-      // propertyMappings.rateLimitPerHour,
-      propertyMappings.ratelimitperhour,
+      propertyMappings.rateLimitPerHour,
+      // propertyMappings.ratelimitperhour,
     );
 
     console.log("STEP 3", allowed);
@@ -1714,8 +1723,8 @@ app.post("/bulk-validate", async (req, res) => {
           // for (const member of listData.results) {
           const allowed = await checkRateLimit(
             portalId,
-            // propertyMappings.rateLimitPerHour,
-            propertyMappings.ratelimitperhour,
+            propertyMappings.rateLimitPerHour,
+            // propertyMappings.ratelimitperhour,
           );
 
           if (!allowed) {
@@ -2224,7 +2233,7 @@ app.post("/settings", validatePortalAccess, async (req, res) => {
       $11, $12, $13, $14
     )
 
-    ON CONFLICT (portalId)
+    ON CONFLICT (portalid)
     DO UPDATE SET
       phoneProperty = EXCLUDED.phoneProperty,
       validationStatusProperty =
