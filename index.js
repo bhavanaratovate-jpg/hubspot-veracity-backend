@@ -1756,7 +1756,8 @@ app.post("/bulk-validate", async (req, res) => {
 
             // FETCH CONTACT
             const contactResponse = await fetch(
-              `https://api.hubapi.com/crm/v3/objects/contacts/${contactId}?properties=${propertyMappings.phoneProperty}`,
+              // `https://api.hubapi.com/crm/v3/objects/contacts/${contactId}?properties=${propertyMappings.phoneProperty}`,
+              `https://api.hubapi.com/crm/v3/objects/contacts/${contactId}?properties=phone`,
               {
                 headers: {
                   Authorization: `Bearer ${accessToken}`,
@@ -1771,8 +1772,10 @@ app.post("/bulk-validate", async (req, res) => {
             console.log("PHONE PROPERTY:", propertyMappings.phoneProperty);
 
             // const phone = contactData?.properties?.phone;
-            const phone =
-              contactData?.properties?.[propertyMappings.phoneProperty];
+            // const phone =
+            //   contactData?.properties?.[propertyMappings.phoneProperty];
+
+            const phone = contactData?.properties?.phone;
 
             console.log("Phone:", maskPhone(phone));
 
