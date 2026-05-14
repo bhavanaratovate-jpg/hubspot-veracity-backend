@@ -2010,6 +2010,9 @@ app.post("/bulk-validate", async (req, res) => {
                 maskedPhone;
             }
 
+            console.log("FINAL HUBSPOT PROPERTIES OBJECT:");
+            console.log(hubspotProperties);
+
             await updateHubSpotObject(
               accessToken,
               "contacts",
