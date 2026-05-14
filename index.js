@@ -1768,6 +1768,8 @@ app.post("/bulk-validate", async (req, res) => {
 
             console.log("CONTACT PROPERTIES:", contactData.properties);
 
+            console.log("PHONE PROPERTY:", propertyMappings.phoneProperty);
+
             // const phone = contactData?.properties?.phone;
             const phone =
               contactData?.properties?.[propertyMappings.phoneProperty];
@@ -2015,6 +2017,14 @@ app.post("/bulk-validate", async (req, res) => {
       `,
       ["completed", batchJobId],
     );
+
+    if (batchJob.processed === 0) {
+      return sendError(
+        res,
+        400,
+        "No contacts processed. Phone property missing.",
+      );
+    }
 
     return sendSuccess(res, "Bulk validation completed successfully", {
       summary: {
