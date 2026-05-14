@@ -664,6 +664,37 @@ bulkvalidatedatproperty AS "bulkValidatedAtProperty"
   }
 }
 
+async function getBulkMappings(portalId) {
+  try {
+    const result = await db.query(
+      `
+      SELECT
+        portalid AS "portalId",
+        bulkveracityapikey AS "bulkVeracityApiKey",
+        bulkratelimitperhour AS "bulkRateLimitPerHour",
+        bulkretentiondays AS "bulkRetentionDays",
+        bulkvalidationstatusproperty AS "bulkValidationStatusProperty",
+        bulkvalidationsummaryproperty AS "bulkValidationSummaryProperty",
+        bulkvalidatedatproperty AS "bulkValidatedAtProperty"
+      FROM bulk_mappings
+      WHERE portalid = $1
+      `,
+      [portalId],
+    );
+
+    return (
+      result.rows[0] || {
+        bulkVeracityApiKey: "",
+        bulkRateLimitPerHour: 100,
+        bulkRetentionDays: 30,
+      }
+    );
+  } catch (error) {
+    console.error("Get bulk mappings error:", error.message);
+    throw error;
+  }
+}
+
 async function getAccessToken(portalId) {
   try {
     // ✅ token still valid
@@ -1633,6 +1664,8 @@ app.post("/bulk-validate", async (req, res) => {
 
     const propertyMappings = await getMappings(portalId);
 
+    const bulkMappings = await getBulkMappings(portalId);
+
     if (!listId) {
       return sendError(res, 400, "listId is required");
     }
@@ -1733,7 +1766,7 @@ app.post("/bulk-validate", async (req, res) => {
           const allowed = await checkRateLimit(
             portalId,
             // propertyMappings.rateLimitPerHour,
-            propertyMappings.bulkRateLimitPerHour ||
+            bulkMappings.bulkRateLimitPerHour ||
               propertyMappings.rateLimitPerHour,
             // propertyMappings.ratelimitperhour,
           );
@@ -1806,9 +1839,8 @@ app.post("/bulk-validate", async (req, res) => {
 
             try {
               // decryptedApiKey = decrypt(propertyMappings.veracityApiKey);
-              decryptedApiKey = decrypt(
-                propertyMappings.bulkVeracityApiKey
-              );
+              // decryptedApiKey = decrypt(propertyMappings.bulkVeracityApiKey);
+              decryptedApiKey = decrypt(bulkMappings.bulkVeracityApiKey);
             } catch (e) {
               // return sendError(res, 400, "Invalid encrypted API key");
 
@@ -1893,21 +1925,21 @@ app.post("/bulk-validate", async (req, res) => {
               [propertyMappings.validatedAtProperty]: new Date().toISOString(),
             };
 
-            if (propertyMappings.bulkValidationStatusProperty) {
-              hubspotProperties[propertyMappings.bulkValidationStatusProperty] =
+            if (bulkMappings.bulkValidationStatusProperty) {
+              hubspotProperties[bulkMappings.bulkValidationStatusProperty] =
                 "completed";
             }
 
-            if (propertyMappings.bulkValidationSummaryProperty) {
+            if (bulkMappings.bulkValidationSummaryProperty) {
               hubspotProperties[
-                propertyMappings.bulkValidationSummaryProperty
+                bulkMappings.bulkValidationSummaryProperty
               ] = veracityData.success
                 ? "Phone validated successfully"
                 : "Invalid phone number detected";
             }
 
-            if (propertyMappings.bulkValidatedAtProperty) {
-              hubspotProperties[propertyMappings.bulkValidatedAtProperty] =
+            if (bulkMappings.bulkValidatedAtProperty) {
+              hubspotProperties[bulkMappings.bulkValidatedAtProperty] =
                 new Date().toISOString();
             }
 
@@ -2147,6 +2179,23 @@ bulkvalidatedatproperty AS "bulkValidatedAtProperty" FROM mappings
 
     const row = result.rows[0];
 
+    const bulkResult = await db.query(
+      `
+  SELECT
+    bulkveracityapikey AS "bulkVeracityApiKey",
+    bulkratelimitperhour AS "bulkRateLimitPerHour",
+    bulkretentiondays AS "bulkRetentionDays",
+    bulkvalidationstatusproperty AS "bulkValidationStatusProperty",
+    bulkvalidationsummaryproperty AS "bulkValidationSummaryProperty",
+    bulkvalidatedatproperty AS "bulkValidatedAtProperty"
+  FROM bulk_mappings
+  WHERE portalid = $1
+  `,
+      [req.query.portalId],
+    );
+
+    const bulkRow = bulkResult.rows[0] || {};
+
     if (!row) {
       return sendSuccess(res, "No settings found", {
         mappings: {
@@ -2172,12 +2221,19 @@ bulkvalidatedatproperty AS "bulkValidatedAtProperty" FROM mappings
       row.veracityApiKey = decrypt(row.veracityApiKey);
     }
 
-    if (row?.bulkVeracityApiKey) {
-      row.bulkVeracityApiKey = decrypt(row.bulkVeracityApiKey);
+    // if (row?.bulkVeracityApiKey) {
+    //   row.bulkVeracityApiKey = decrypt(row.bulkVeracityApiKey);
+    // }
+
+    if (bulkRow?.bulkVeracityApiKey) {
+      bulkRow.bulkVeracityApiKey = decrypt(bulkRow.bulkVeracityApiKey);
     }
 
     return sendSuccess(res, "Settings fetched successfully", {
-      mappings: row,
+      mappings: {
+        ...row,
+        ...bulkRow,
+      },
     });
   } catch (error) {
     console.error(error);
@@ -2388,6 +2444,41 @@ bulkValidatedAtProperty =
 
           bulkRateLimitPerHour,
 
+          bulkRetentionDays,
+          bulkValidationStatusProperty,
+          bulkValidationSummaryProperty,
+          bulkValidatedAtProperty,
+        ],
+      );
+
+      await db.query(
+        `
+  INSERT INTO bulk_mappings (
+    portalid,
+    bulkveracityapikey,
+    bulkratelimitperhour,
+    bulkretentiondays,
+    bulkvalidationstatusproperty,
+    bulkvalidationsummaryproperty,
+    bulkvalidatedatproperty
+  )
+  VALUES (
+    $1, $2, $3, $4, $5, $6, $7
+  )
+
+  ON CONFLICT (portalid)
+  DO UPDATE SET
+    bulkveracityapikey = EXCLUDED.bulkveracityapikey,
+    bulkratelimitperhour = EXCLUDED.bulkratelimitperhour,
+    bulkretentiondays = EXCLUDED.bulkretentiondays,
+    bulkvalidationstatusproperty = EXCLUDED.bulkvalidationstatusproperty,
+    bulkvalidationsummaryproperty = EXCLUDED.bulkvalidationsummaryproperty,
+    bulkvalidatedatproperty = EXCLUDED.bulkvalidatedatproperty
+  `,
+        [
+          portalId,
+          encrypt(bulkVeracityApiKey),
+          bulkRateLimitPerHour,
           bulkRetentionDays,
           bulkValidationStatusProperty,
           bulkValidationSummaryProperty,
