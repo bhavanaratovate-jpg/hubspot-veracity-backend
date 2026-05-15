@@ -1992,6 +1992,8 @@ app.post("/bulk-validate", async (req, res) => {
                 new Date().toISOString();
             }
 
+            console.log("FINAL HUBSPOT PROPERTIES:", hubspotProperties);
+
             // if (
             //   propertyMappings.storeNormalizedPhone &&
             //   propertyMappings.normalizedPhoneProperty
