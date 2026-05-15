@@ -194,6 +194,7 @@ function maskPhone(phone) {
 }
 
 app.get("/install", (req, res) => {
+  console.log("REDIRECT URI:", process.env.HUBSPOT_REDIRECT_URI);
   const installUrl =
     `https://app.hubspot.com/oauth/authorize` +
     `?client_id=${process.env.HUBSPOT_CLIENT_ID}` +
