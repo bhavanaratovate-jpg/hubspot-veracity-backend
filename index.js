@@ -755,6 +755,12 @@ async function getAccessToken(portalId) {
 
     const tokenData = result.rows[0];
 
+    console.log("REQUEST PORTAL ID:", portalId);
+
+    console.log("TOKEN DATA:", tokenData);
+
+    console.log("TOKEN HUB ID:", tokenData.portalId);
+
     if (!tokenData) {
       throw new Error("No OAuth token found for portal");
     }
