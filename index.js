@@ -299,7 +299,11 @@ app.get("/oauth/callback", async (req, res) => {
       console.log("TOKEN SAVE ERROR:", err.message);
     }
 
-    res.send("OAuth token generated successfully");
+    // res.send("OAuth token generated successfully");
+
+    res.redirect(
+      `https://app-na2.hubspot.com/contacts/${tokenResponse.hub_id}`,
+    );
   } catch (error) {
     console.error(error.response?.data || error.message);
 
