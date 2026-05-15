@@ -197,9 +197,10 @@ app.get("/install", (req, res) => {
   const installUrl =
     `https://app.hubspot.com/oauth/authorize` +
     `?client_id=${process.env.HUBSPOT_CLIENT_ID}` +
-    `&scope=crm.objects.contacts.read crm.objects.contacts.write crm.objects.companies.read crm.objects.companies.write crm.lists.read` +
-    `&redirect_uri=${process.env.HUBSPOT_REDIRECT_URI}`;
-
+    `&scope=${encodeURIComponent(
+      "crm.objects.contacts.read crm.objects.contacts.write crm.objects.companies.read crm.objects.companies.write crm.lists.read oauth",
+    )}` +
+    `&redirect_uri=${encodeURIComponent(process.env.HUBSPOT_REDIRECT_URI)}`;
   res.redirect(installUrl);
 });
 
@@ -305,9 +306,13 @@ app.get("/oauth/callback", async (req, res) => {
     //   `https://app-na2.hubspot.com/contacts/${tokenResponse.hub_id}`,
     // );
 
+    // res.redirect(
+    //   `https://app-na2.hubspot.com/developer-projects-local-dev/${tokenResponse.hub_id}?welcome=`,
+    // );
+
     res.redirect(
-  `https://app-na2.hubspot.com/developer-projects-local-dev/${tokenResponse.hub_id}?welcome=`
-);
+      `https://app-na2.hubspot.com/contacts/${tokenResponse.hub_id}/objects/0-1/views/all/list`,
+    );
   } catch (error) {
     console.error(error.response?.data || error.message);
 
