@@ -2325,10 +2325,13 @@ app.post("/settings", validatePortalAccess, async (req, res) => {
       bulkValidatedAtProperty,
     } = req.body;
 
-    console.log("BULK SETTINGS BODY:", {
+    console.log("BULK/SINGLE SETTINGS BODY:", {
       bulkValidationStatusProperty,
       bulkValidationSummaryProperty,
       bulkValidatedAtProperty,
+      validationStatusProperty,
+      carrierProperty,
+      validatedAtProperty,
     });
 
     // db.run(
