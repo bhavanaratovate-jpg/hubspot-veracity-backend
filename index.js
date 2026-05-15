@@ -301,8 +301,12 @@ app.get("/oauth/callback", async (req, res) => {
 
     // res.send("OAuth token generated successfully");
 
+    // res.redirect(
+    //   `https://app-na2.hubspot.com/contacts/${tokenResponse.hub_id}`,
+    // );
+
     res.redirect(
-      `https://app-na2.hubspot.com/contacts/${tokenResponse.hub_id}`,
+      `https://app-na2.hubspot.com/developer-projects-local-dev/${tokenResponse.hub_id}?welcome=`,
     );
   } catch (error) {
     console.error(error.response?.data || error.message);
