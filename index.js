@@ -1958,18 +1958,22 @@ app.post("/bulk-validate", async (req, res) => {
             //   [propertyMappings.validatedAtProperty]: new Date().toISOString(),
             // };
 
-            // const hubspotProperties = {};
+            const hubspotProperties = {};
 
-            const hubspotProperties = {
-              [propertyMappings.validationStatusProperty]: veracityData.success
-                ? "valid"
-                : "invalid",
+            if (propertyMappings?.validationStatusProperty) {
+              hubspotProperties[propertyMappings.validationStatusProperty] =
+                veracityData.success ? "valid" : "invalid";
+            }
 
-              [propertyMappings.carrierProperty]:
-                veracityData?.data?.carrier_name || "",
+            if (propertyMappings?.carrierProperty) {
+              hubspotProperties[propertyMappings.carrierProperty] =
+                veracityData?.data?.carrier_name || "";
+            }
 
-              [propertyMappings.validatedAtProperty]: new Date().toISOString(),
-            };
+            if (propertyMappings?.validatedAtProperty) {
+              hubspotProperties[propertyMappings.validatedAtProperty] =
+                new Date().toISOString();
+            }
 
             if (bulkMappings.bulkValidationStatusProperty) {
               hubspotProperties[bulkMappings.bulkValidationStatusProperty] =
