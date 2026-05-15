@@ -1528,17 +1528,32 @@ app.post("/validate-phone", async (req, res) => {
 
     console.log("STORE NORMALIZED:", propertyMappings.storeNormalizedPhone);
 
-    if (
-      shouldStoreNormalized &&
-      propertyMappings.normalizedPhoneProperty &&
-      normalizedPhone
-    ) {
-      const maskedPhone =
-        normalizedPhone.length > 6
-          ? `${normalizedPhone.slice(0, 4)}******${normalizedPhone.slice(-2)}`
-          : normalizedPhone;
+    // if (
+    //   shouldStoreNormalized &&
+    //   propertyMappings.normalizedPhoneProperty &&
+    //   normalizedPhone
+    // ) {
+    //   const maskedPhone =
+    //     normalizedPhone.length > 6
+    //       ? `${normalizedPhone.slice(0, 4)}******${normalizedPhone.slice(-2)}`
+    //       : normalizedPhone;
 
-      hubspotProperties[propertyMappings.normalizedPhoneProperty] = maskedPhone;
+    //   hubspotProperties[propertyMappings.normalizedPhoneProperty] = maskedPhone;
+    // }
+
+    if (propertyMappings.normalizedPhoneProperty) {
+      if (shouldStoreNormalized && normalizedPhone) {
+        const maskedPhone =
+          normalizedPhone.length > 6
+            ? `${normalizedPhone.slice(0, 4)}******${normalizedPhone.slice(-2)}`
+            : normalizedPhone;
+
+        hubspotProperties[propertyMappings.normalizedPhoneProperty] =
+          maskedPhone;
+      } else {
+        // clear old value when toggle OFF
+        hubspotProperties[propertyMappings.normalizedPhoneProperty] = "";
+      }
     }
 
     // await updateHubSpotObject(accessToken, hubspotObjectType, contactId,hubspotProperties, {
