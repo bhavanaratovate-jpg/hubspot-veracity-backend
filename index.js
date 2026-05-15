@@ -1386,7 +1386,12 @@ app.post("/validate-phone", async (req, res) => {
 
     // const overwriteEnabled = String(propertyMappings.overwriteExisting) === "1";
 
-    const overwriteEnabled = propertyMappings.overwriteExisting === true;
+    // const overwriteEnabled = propertyMappings.overwriteExisting === true;
+
+    const overwriteEnabled =
+      String(propertyMappings.overwriteExisting) === "true" ||
+      String(propertyMappings.overwriteExisting) === "1" ||
+      propertyMappings.overwriteExisting === true;
 
     console.log("OVERWRITE:", overwriteEnabled);
 
@@ -1515,7 +1520,13 @@ app.post("/validate-phone", async (req, res) => {
     //   propertyMappings.storeNormalizedPhone === true;
 
     const shouldStoreNormalized =
+      // propertyMappings.storeNormalizedPhone === true;
+
+      String(propertyMappings.storeNormalizedPhone) === "true" ||
+      String(propertyMappings.storeNormalizedPhone) === "1" ||
       propertyMappings.storeNormalizedPhone === true;
+
+    console.log("STORE NORMALIZED:", propertyMappings.storeNormalizedPhone);
 
     if (
       shouldStoreNormalized &&
