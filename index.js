@@ -235,9 +235,6 @@ app.get("/oauth/callback", async (req, res) => {
 
     const tokenResponse = await response.json();
 
-    console.log("TokenResponse:", tokenResponse);
-    console.log(tokenResponse.hub_id);
-
     // console.log("TOKEN RESPONSE:", tokenResponse);
 
     console.log("OAuth token generated successfully");
@@ -309,9 +306,8 @@ app.get("/oauth/callback", async (req, res) => {
     // );
 
     res.redirect(
-      // `https://app-na2.hubspot.com/developer-projects-local-dev/${tokenResponse.hub_id}?welcome=`,
-      `https://app-na2.hubspot.com/developer-projects-local-dev/246089646?welcome=`,
-    );
+  `https://app-na2.hubspot.com/developer-projects-local-dev/${tokenResponse.hub_id}?welcome=`
+);
   } catch (error) {
     console.error(error.response?.data || error.message);
 
