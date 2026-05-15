@@ -1958,7 +1958,18 @@ app.post("/bulk-validate", async (req, res) => {
             //   [propertyMappings.validatedAtProperty]: new Date().toISOString(),
             // };
 
-            const hubspotProperties = {};
+            // const hubspotProperties = {};
+
+            const hubspotProperties = {
+              [propertyMappings.validationStatusProperty]: veracityData.success
+                ? "valid"
+                : "invalid",
+
+              [propertyMappings.carrierProperty]:
+                veracityData?.data?.carrier_name || "",
+
+              [propertyMappings.validatedAtProperty]: new Date().toISOString(),
+            };
 
             if (bulkMappings.bulkValidationStatusProperty) {
               hubspotProperties[bulkMappings.bulkValidationStatusProperty] =
