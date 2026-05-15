@@ -235,7 +235,8 @@ app.get("/oauth/callback", async (req, res) => {
 
     const tokenResponse = await response.json();
 
-    console.log(tokenResponse);
+    console.log("TokenResponse:", tokenResponse);
+    console.log(tokenResponse.hub_id);
 
     // console.log("TOKEN RESPONSE:", tokenResponse);
 
