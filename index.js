@@ -2695,40 +2695,109 @@ app.get("/hubspot-lists", async (req, res) => {
   }
 });
 
-app.get("/batch-job/:id", async (req, res) => {
-  // db.get(
-  //   `
-  //   SELECT *
-  //   FROM batch_jobs
-  //   WHERE id = ?
-  // `,
-  //   [req.params.id],
-  //   (err, row) => {
-  //     if (err) {
-  //       return sendError(res, 500, "Failed to fetch batch job");
-  //     }
+// app.get("/batch-job/:id", async (req, res) => {
+//   // db.get(
+//   //   `
+//   //   SELECT *
+//   //   FROM batch_jobs
+//   //   WHERE id = ?
+//   // `,
+//   //   [req.params.id],
+//   //   (err, row) => {
+//   //     if (err) {
+//   //       return sendError(res, 500, "Failed to fetch batch job");
+//   //     }
 
-  //     return sendSuccess(res, "Batch job fetched", row);
-  //   },
-  // );
+//   //     return sendSuccess(res, "Batch job fetched", row);
+//   //   },
+//   // );
 
+//   try {
+//     const result = await db.query(
+//       `
+//     SELECT *
+//     FROM batch_jobs
+//     WHERE id = $1
+//     `,
+//       [req.params.id],
+//     );
+
+//     const row = result.rows[0];
+
+//     return sendSuccess(res, "Batch job fetched", row);
+//   } catch (error) {
+//     console.error(error);
+
+//     return sendError(res, 500, "Failed to fetch batch job");
+//   }
+// });
+
+app.get("/hubspot-lists", async (req, res) => {
   try {
-    const result = await db.query(
-      `
-    SELECT *
-    FROM batch_jobs
-    WHERE id = $1
-    `,
-      [req.params.id],
+    console.log("===== HUBSPOT LIST API HIT =====");
+
+    console.log("REQ QUERY:", req.query);
+
+    const portalId = req.query.portalId;
+
+    console.log("PORTAL ID:", portalId);
+
+    const accessToken = await getAccessToken(portalId);
+
+    console.log("Fetching HubSpot lists...");
+
+    const response = await fetch("https://api.hubapi.com/crm/v3/lists/search", {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${accessToken}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        objectTypeId: "0-1", // Contacts
+      }),
+    });
+
+    const rawText = await response.text();
+
+    console.log("STATUS:", response.status);
+
+    console.log("RAW HUBSPOT RESPONSE:", rawText.substring(0, 3000));
+
+    let data = {};
+
+    try {
+      data = rawText ? JSON.parse(rawText) : {};
+    } catch (e) {
+      console.log("JSON PARSE FAILED");
+
+      return sendError(res, 500, "HubSpot returned invalid response");
+    }
+
+    console.log("PARSED DATA:", JSON.stringify(data, null, 2));
+
+    const lists = data.results || [];
+
+    console.log("LISTS ARRAY:", JSON.stringify(lists, null, 2));
+
+    const formattedLists = lists.map((list) => ({
+      label: `${list.name || "Unknown List"} (${
+        list.crmSearchSize || list.processingStatus?.size || 0
+      })`,
+      value: String(list.listId || list.id || ""),
+    }));
+
+    console.log(
+      "FORMATTED LISTS FINAL:",
+      JSON.stringify(formattedLists, null, 2),
     );
 
-    const row = result.rows[0];
-
-    return sendSuccess(res, "Batch job fetched", row);
+    return sendSuccess(res, "Lists fetched successfully", {
+      lists: formattedLists,
+    });
   } catch (error) {
-    console.error(error);
+    console.error("List fetch error:", error.message);
 
-    return sendError(res, 500, "Failed to fetch batch job");
+    return sendError(res, 500, "Unable to fetch lists");
   }
 });
 
