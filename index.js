@@ -2637,11 +2637,19 @@ app.get("/hubspot-lists", async (req, res) => {
 
     const lists = data.results || data.lists || [];
 
+    // const formattedLists = lists.map((list) => ({
+    //   label: `${list.name || "Unknown"} (${list.crmSearchSize || 0})`,
+
+    //   value: String(list.listId || list.id || ""),
+
+    //   objectTypeId: list.objectTypeId || "",
+    // }));
+
     const formattedLists = lists.map((list) => ({
-      label: `${list.name || "Unknown"} (${list.crmSearchSize || 0})`,
-
-      value: String(list.listId || list.id || ""),
-
+      label: `${list.name || "Unknown"} (${
+        list.processingStatus?.size || list.metaData?.size || 0
+      })`,
+      value: String(list.listId || list.id),
       objectTypeId: list.objectTypeId || "",
     }));
 
