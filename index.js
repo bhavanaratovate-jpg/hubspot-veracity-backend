@@ -2737,6 +2737,8 @@ console.log("***** NEW SEARCH CODE RUNNING *****");
 app.get("/hubspot-lists", async (req, res) => {
   console.log("######## VERSION-SEARCH-001 ########");
   try {
+    console.log("######## VERSION-CHECK-999 ########");
+
     console.log("===== HUBSPOT LIST API HIT =====");
 
     console.log("REQ QUERY:", req.query);
