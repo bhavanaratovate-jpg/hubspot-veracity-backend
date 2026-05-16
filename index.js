@@ -2731,10 +2731,22 @@ app.get("/hubspot-lists", async (req, res) => {
     //   value: String(list.listId || list.id || ""),
     // }));
 
+    // const formattedLists = lists.map((list) => ({
+    //   label: `${list.name || list.label || "Unknown List"} - Contacts: ${list.metaData?.size || 0}`,
+    //   value: String(list.listId || list.id || ""),
+    // }));
+
+    // const formattedLists = lists.map((list) => ({
+    //   label: `${list.name || list.label || "Unknown List"} - Contacts: ${list.metaData?.size || 0}`,
+    //   value: String(list.id || list.listId || ""),
+    // }));
+
     const formattedLists = lists.map((list) => ({
-      label: `${list.name || list.label || "Unknown List"} - Contacts: ${list.metaData?.size || 0}`,
+      label: `${list.name || "Unknown List"} (${list.crmSearchSize || list.metaData?.size || 0})`,
       value: String(list.listId || list.id || ""),
     }));
+
+    console.log("FORMATTED:", formattedLists);
 
     return sendSuccess(res, "Lists fetched successfully", {
       lists: formattedLists,
