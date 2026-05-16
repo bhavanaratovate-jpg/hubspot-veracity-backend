@@ -2735,6 +2735,7 @@ app.get("/hubspot-lists", async (req, res) => {
 console.log("***** NEW SEARCH CODE RUNNING *****");
 
 app.get("/hubspot-lists", async (req, res) => {
+  console.log("######## VERSION-SEARCH-001 ########");
   try {
     console.log("===== HUBSPOT LIST API HIT =====");
 
@@ -2747,6 +2748,8 @@ app.get("/hubspot-lists", async (req, res) => {
     const accessToken = await getAccessToken(portalId);
 
     console.log("Fetching HubSpot lists...");
+
+    console.log("USING SEARCH API");
 
     const response = await fetch("https://api.hubapi.com/crm/v3/lists/search", {
       method: "POST",
