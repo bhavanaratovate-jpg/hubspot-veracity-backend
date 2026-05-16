@@ -2627,8 +2627,7 @@ app.get("/hubspot-lists", async (req, res) => {
 
     // const response = await fetch("https://api.hubapi.com/contacts/v1/lists", {
     const response = await fetch(
-      // "https://api.hubapi.com/crm/v3/lists?count=100",
-      "https://api.hubapi.com/contacts/v1/lists?count=100",
+      "https://api.hubapi.com/crm/v3/lists?count=100",
       {
         method: "GET",
         headers: {
@@ -2740,6 +2739,13 @@ app.get("/hubspot-lists", async (req, res) => {
     //   label: `${list.name || list.label || "Unknown List"} - Contacts: ${list.metaData?.size || 0}`,
     //   value: String(list.id || list.listId || ""),
     // }));
+
+    // const formattedLists = lists.map((list) => ({
+    //   label: `${list.name || "Unknown List"} (${list.crmSearchSize || list.metaData?.size || 0})`,
+    //   value: String(list.listId || list.id || ""),
+    // }));
+
+    // console.log("FORMATTED:", formattedLists);
 
     const formattedLists = lists.map((list) => ({
       label: `${list.name || "Unknown List"} (${list.crmSearchSize || list.metaData?.size || 0})`,
