@@ -2627,8 +2627,7 @@ app.get("/hubspot-lists", async (req, res) => {
 
     // const response = await fetch("https://api.hubapi.com/contacts/v1/lists", {
     const response = await fetch(
-      // "https://api.hubapi.com/crm/v3/lists?count=100",
-      "https://api.hubapi.com/crm/v3/lists/object-type-id/0-1?count=100",
+      "https://api.hubapi.com/crm/v3/lists?count=100",
       {
         method: "GET",
         headers: {
@@ -2638,155 +2637,51 @@ app.get("/hubspot-lists", async (req, res) => {
       },
     );
 
-    // console.log("HUBSPOT RAW LISTS", response.data);
-
-    // const data = await response.json();
-
-    // console.log("ACTUAL HUBSPOT DATA:", data);
-
-    // const lists = data.results || [];
-
-    // if (!response.ok) {
-    //   const errorText = await response.text();
-
-    //   console.error("Failed to fetch lists:", errorText);
-
-    //   return sendError(res, 500, "Failed to fetch HubSpot lists");
-    // }
-
     // const rawText = await response.text();
 
     // console.log("RAW HUBSPOT RESPONSE:", rawText);
 
     // const data = rawText ? JSON.parse(rawText) : {};
 
-    // if (data.results) {
-    //   data.results.forEach((list) => {
-    //     console.log("BACKEND LIST:", list);
-    //   });
-    // }
-
     // const allLists = data.results || data.lists || [];
 
     // const lists = allLists;
 
-    const data = await response.json();
+    const rawText = await response.text();
 
-    console.log("FULL HUBSPOT LIST RESPONSE:", JSON.stringify(data, null, 2));
+    console.log("STATUS:", response.status);
+    console.log("STATUS TEXT:", response.statusText);
 
-    const lists = Array.isArray(data.lists)
-      ? data.lists
-      : Array.isArray(data.results)
-        ? data.results
-        : [];
+    console.log("RAW HUBSPOT RESPONSE:", rawText.substring(0, 3000));
 
-    console.log("LISTS:", lists);
+    let data = {};
+
+    try {
+      data = rawText ? JSON.parse(rawText) : {};
+    } catch (e) {
+      console.log("JSON PARSE FAILED");
+
+      return sendError(res, 500, "HubSpot returned non-json response");
+    }
+
+    console.log("PARSED DATA:", JSON.stringify(data, null, 2));
+
+    const lists = data.results || data.lists || [];
+
+    console.log("LISTS ARRAY:", JSON.stringify(lists, null, 2));
 
     console.log("TOTAL LISTS FROM HUBSPOT:", lists.length);
-
-    // if (!response.ok) {
-    //   console.error("Failed to fetch lists:", data);
-
-    //   return sendError(res, 500, "Failed to fetch HubSpot lists");
-    // }
-
-    // const lists = data.results || [];
-
-    // const lists = data.results || data.lists || [];
-
-    // const data = await response.json();
-
-    // console.log("LIST RESPONSE:", data);
 
     console.log("HubSpot lists fetched successfully");
 
-    // console.log("FULL LIST OBJECT:", data.results?.[0]);
-
-    // console.log(
-    //   "FULL HUBSPOT RESPONSE:",
-    //   JSON.stringify(response.data, null, 2),
-    // );
-
-    // const lists = data.lists || [];
-
-    // const lists = data.results || [];
-
-    // const lists = data.lists || data.results || [];
-
-    // console.log("RAW HUBSPOT LISTS:", JSON.stringify(lists, null, 2));
-
     console.log("TOTAL LISTS FROM HUBSPOT:", lists.length);
-
-    // const formattedLists = lists.map((list) => {
-    //   console.log("LIST IDS:", {
-    //     listId: list.listId,
-    //     objectId: list.objectId,
-    //     id: list.id,
-    //   });
-
-    //   return {
-    //     label: `${list.name} (${list.metaData?.size || 0})`,
-    //     // value: String(list.listId),
-    //     value: String(list.listId || list.id),
-    //   };
-    // });
-
-    // console.log("FORMATTED LISTS:", formattedLists);
-
-    // const formattedLists = lists.map((list) => ({
-    //   label: `${list.name || list.label} (${list.metaData?.size || 0})`,
-    //   value: String(list.listId || list.id),
-    // }));
-
-    // const formattedLists = lists.map((list) => ({
-    //   label: `${list.name || list.label || "Unknown List"} (${list.metaData?.size || 0})`,
-    //   value: String(list.listId || list.id || ""),
-    // }));
-
-    // const formattedLists = lists.map((list) => ({
-    //   label: `${list.name || list.label || "Unknown List"} - Contacts: ${list.metaData?.size || 0}`,
-    //   value: String(list.listId || list.id || ""),
-    // }));
-
-    // const formattedLists = lists.map((list) => ({
-    //   label: `${list.name || list.label || "Unknown List"} - Contacts: ${list.metaData?.size || 0}`,
-    //   value: String(list.id || list.listId || ""),
-    // }));
-
-    // const formattedLists = lists.map((list) => ({
-    //   label: `${list.name || "Unknown List"} (${list.crmSearchSize || list.metaData?.size || 0})`,
-    //   value: String(list.listId || list.id || ""),
-    // }));
-
-    // console.log("FORMATTED:", formattedLists);
-
-    // console.log("FULL LIST OBJECT:", JSON.stringify(allLists, null, 2));
 
     console.log("FULL LIST OBJECT:", JSON.stringify(lists, null, 2));
 
-    // const formattedLists = lists.map((list) => ({
-    //   label: `${list.name || "Unknown List"} (${list.crmSearchSize || list.metaData?.size || 0})`,
-    //   value: String(list.listId || list.id || ""),
-    // }));
-
-    // const formattedLists = lists.map((list) => ({
-    //   label: `${list.name} (${list.processingStatus?.size || 0})`,
-    //   value: String(list.listId || list.listId || list.id),
-    // }));
-
     const formattedLists = lists.map((list) => ({
-      label: `${list.name || "Unknown List"} (${
-        list.crmSearchSize || list.processingStatus?.size || 0
-      })`,
+      label: `${list.name || "Unknown List"} (${list.crmSearchSize || list.metaData?.size || 0})`,
       value: String(list.listId || list.id || ""),
     }));
-
-    console.log(
-      "FORMATTED LISTS FINAL:",
-      JSON.stringify(formattedLists, null, 2),
-    );
-
-    console.log("FORMATTED:", formattedLists);
 
     console.log("FORMATTED:", JSON.stringify(formattedLists, null, 2));
 
