@@ -2698,6 +2698,10 @@ app.get("/hubspot-lists", async (req, res) => {
 
     // console.log("RAW HUBSPOT LISTS:", JSON.stringify(lists, null, 2));
 
+    console.log("TOTAL LISTS FROM HUBSPOT:", lists.length);
+
+    console.log("FIRST RAW LIST:", JSON.stringify(lists[0], null, 2));
+
     const formattedLists = lists.map((list) => {
       console.log("LIST IDS:", {
         listId: list.listId,
