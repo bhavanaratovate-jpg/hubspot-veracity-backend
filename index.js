@@ -2764,16 +2764,25 @@ app.get("/hubspot-lists", async (req, res) => {
     //   }),
     // });
 
-    const response = await fetch(
-      "https://api.hubapi.com/contacts/v1/lists?count=100",
-      {
-        method: "GET",
-        headers: {
-          Authorization: `Bearer ${accessToken}`,
-          "Content-Type": "application/json",
-        },
+    // const response = await fetch(
+    //   "https://api.hubapi.com/contacts/v1/lists?count=100",
+    //   {
+    //     method: "GET",
+    //     headers: {
+    //       Authorization: `Bearer ${accessToken}`,
+    //       "Content-Type": "application/json",
+    //     },
+    //   },
+    // );
+
+    const response = await fetch("https://api.hubapi.com/crm/v3/lists", {
+      method: "GET",
+      headers: {
+        Authorization: `Bearer ${accessToken}`,
+        "Content-Type": "application/json",
       },
-    );
+    });
+
     console.log("USING SEARCH API");
 
     console.log("STATUS:", response.status);
@@ -2813,12 +2822,19 @@ app.get("/hubspot-lists", async (req, res) => {
     //   JSON.stringify(formattedLists, null, 2),
     // );
 
+    // const formattedLists = lists.map((list) => ({
+    //   label: `${list.name || "Unknown"} (${list.metaData?.size || 0})`,
+    //   value: String(list.listId),
+    // }));
+
+    // console.log("LEGACY FORMATTED:", JSON.stringify(formattedLists, null, 2));
+
     const formattedLists = lists.map((list) => ({
-      label: `${list.name || "Unknown"} (${list.metaData?.size || 0})`,
-      value: String(list.listId),
+      label: `${list.name || "Unknown"} (${list.crmSearchSize || 0})`,
+      value: String(list.listId || list.id),
     }));
 
-    console.log("LEGACY FORMATTED:", JSON.stringify(formattedLists, null, 2));
+    console.log("FORMATTED:", JSON.stringify(formattedLists, null, 2));
 
     return sendSuccess(res, "Lists fetched successfully", {
       lists: formattedLists,
