@@ -2732,6 +2732,9 @@ app.get("/hubspot-lists", async (req, res) => {
 //   }
 // });
 
+
+console.log("***** NEW SEARCH CODE RUNNING *****");
+
 app.get("/hubspot-lists", async (req, res) => {
   try {
     console.log("===== HUBSPOT LIST API HIT =====");
@@ -2759,11 +2762,14 @@ app.get("/hubspot-lists", async (req, res) => {
       }),
     });
 
+    console.log("USING SEARCH API");
+
     const data = await response.json();
 
     console.log("SEARCH RESPONSE:", JSON.stringify(data, null, 2));
 
-    const lists = data.lists || [];
+    const lists = data.results || data.lists || [];
+    
     console.log("LISTS:", JSON.stringify(lists, null, 2));
 
     const formattedLists = lists.map((list) => ({
