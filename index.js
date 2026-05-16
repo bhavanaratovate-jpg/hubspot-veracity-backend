@@ -2613,6 +2613,12 @@ bulkValidatedAtProperty =
 
 app.get("/hubspot-lists", async (req, res) => {
   try {
+    console.log("===== HUBSPOT LIST API HIT =====");
+
+    console.log("REQ QUERY:", req.query);
+
+    console.log("PORTAL ID:", req.query.portalId);
+
     console.log("Fetching HubSpot lists...");
 
     const portalId = req.query.portalId;
@@ -2652,6 +2658,14 @@ app.get("/hubspot-lists", async (req, res) => {
     console.log("RAW HUBSPOT RESPONSE:", rawText);
 
     const data = rawText ? JSON.parse(rawText) : {};
+
+    console.log("FULL HUBSPOT RESPONSE:", JSON.stringify(data, null, 2));
+
+    if (data.results) {
+      data.results.forEach((list) => {
+        console.log("BACKEND LIST:", list);
+      });
+    }
 
     if (!response.ok) {
       console.error("Failed to fetch lists:", data);
