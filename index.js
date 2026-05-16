@@ -2747,12 +2747,16 @@ app.get("/hubspot-lists", async (req, res) => {
 
     // console.log("FORMATTED:", formattedLists);
 
+    console.log("FULL LIST OBJECT:", JSON.stringify(allLists, null, 2));
+
     const formattedLists = lists.map((list) => ({
       label: `${list.name || "Unknown List"} (${list.crmSearchSize || list.metaData?.size || 0})`,
       value: String(list.listId || list.id || ""),
     }));
 
     console.log("FORMATTED:", formattedLists);
+
+    console.log("FORMATTED:", JSON.stringify(formattedLists, null, 2));
 
     return sendSuccess(res, "Lists fetched successfully", {
       lists: formattedLists,
