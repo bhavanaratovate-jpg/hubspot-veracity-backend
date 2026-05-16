@@ -2627,7 +2627,8 @@ app.get("/hubspot-lists", async (req, res) => {
 
     // const response = await fetch("https://api.hubapi.com/contacts/v1/lists", {
     const response = await fetch(
-      "https://api.hubapi.com/crm/v3/lists?count=100",
+      // "https://api.hubapi.com/crm/v3/lists?count=100",
+      "https://api.hubapi.com/crm/v3/lists/object-type-id/0-1?count=100",
       {
         method: "GET",
         headers: {
