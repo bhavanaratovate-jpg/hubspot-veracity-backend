@@ -2749,21 +2749,31 @@ app.get("/hubspot-lists", async (req, res) => {
 
     console.log("Fetching HubSpot lists...");
 
-    console.log("USING SEARCH API");
+    console.log("USING LEGACY LIST API");
 
-    const response = await fetch("https://api.hubapi.com/crm/v3/lists/search", {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${accessToken}`,
-        "Content-Type": "application/json",
+    // const response = await fetch("https://api.hubapi.com/crm/v3/lists/search", {
+    //   method: "POST",
+    //   headers: {
+    //     Authorization: `Bearer ${accessToken}`,
+    //     "Content-Type": "application/json",
+    //   },
+    //   body: JSON.stringify({
+    //     offset: 0,
+    //     count: 100,
+    //     additionalProperties: ["hs_list_size_week_delta"],
+    //   }),
+    // });
+
+    const response = await fetch(
+      "https://api.hubapi.com/contacts/v1/lists?count=100",
+      {
+        method: "GET",
+        headers: {
+          Authorization: `Bearer ${accessToken}`,
+          "Content-Type": "application/json",
+        },
       },
-      body: JSON.stringify({
-        offset: 0,
-        count: 100,
-        additionalProperties: ["hs_list_size_week_delta"],
-      }),
-    });
-
+    );
     console.log("USING SEARCH API");
 
     console.log("STATUS:", response.status);
@@ -2785,21 +2795,30 @@ app.get("/hubspot-lists", async (req, res) => {
 
     console.log("SEARCH RESPONSE:", JSON.stringify(data, null, 2));
 
-    const lists = data.results || data.lists || [];
+    // const lists = data.results || data.lists || [];
+
+    const lists = data.lists || [];
 
     console.log("LISTS:", JSON.stringify(lists, null, 2));
 
+    // const formattedLists = lists.map((list) => ({
+    //   label: `${list.name || "Unknown List"} (${
+    //     list.crmSearchSize || list.processingStatus?.size || 0
+    //   })`,
+    //   value: String(list.listId || list.id || ""),
+    // }));
+
+    // console.log(
+    //   "FORMATTED LISTS FINAL:",
+    //   JSON.stringify(formattedLists, null, 2),
+    // );
+
     const formattedLists = lists.map((list) => ({
-      label: `${list.name || "Unknown List"} (${
-        list.crmSearchSize || list.processingStatus?.size || 0
-      })`,
-      value: String(list.listId || list.id || ""),
+      label: `${list.name || "Unknown"} (${list.metaData?.size || 0})`,
+      value: String(list.listId),
     }));
 
-    console.log(
-      "FORMATTED LISTS FINAL:",
-      JSON.stringify(formattedLists, null, 2),
-    );
+    console.log("LEGACY FORMATTED:", JSON.stringify(formattedLists, null, 2));
 
     return sendSuccess(res, "Lists fetched successfully", {
       lists: formattedLists,
