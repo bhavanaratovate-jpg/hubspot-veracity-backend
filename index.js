@@ -2660,8 +2660,6 @@ app.get("/hubspot-lists", async (req, res) => {
 
     const data = rawText ? JSON.parse(rawText) : {};
 
-    console.log("FULL HUBSPOT RESPONSE:", JSON.stringify(data, null, 2));
-
     // if (data.results) {
     //   data.results.forEach((list) => {
     //     console.log("BACKEND LIST:", list);
@@ -2669,10 +2667,6 @@ app.get("/hubspot-lists", async (req, res) => {
     // }
 
     const allLists = data.results || data.lists || [];
-
-    allLists.forEach((list) => {
-      console.log("BACKEND LIST:", list);
-    });
 
     const lists = allLists;
 
@@ -2701,8 +2695,6 @@ app.get("/hubspot-lists", async (req, res) => {
     //   JSON.stringify(response.data, null, 2),
     // );
 
-    console.log("ACTUAL HUBSPOT DATA:", JSON.stringify(data, null, 2));
-
     // const lists = data.lists || [];
 
     // const lists = data.results || [];
@@ -2711,9 +2703,7 @@ app.get("/hubspot-lists", async (req, res) => {
 
     // console.log("RAW HUBSPOT LISTS:", JSON.stringify(lists, null, 2));
 
-    // console.log("TOTAL LISTS FROM HUBSPOT:", lists.length);
-
-    console.log("FIRST RAW LIST:", JSON.stringify(lists[0], null, 2));
+    console.log("TOTAL LISTS FROM HUBSPOT:", lists.length);
 
     // const formattedLists = lists.map((list) => {
     //   console.log("LIST IDS:", {
@@ -2736,8 +2726,13 @@ app.get("/hubspot-lists", async (req, res) => {
     //   value: String(list.listId || list.id),
     // }));
 
+    // const formattedLists = lists.map((list) => ({
+    //   label: `${list.name || list.label || "Unknown List"} (${list.metaData?.size || 0})`,
+    //   value: String(list.listId || list.id || ""),
+    // }));
+
     const formattedLists = lists.map((list) => ({
-      label: `${list.name || list.label || "Unknown List"} (${list.metaData?.size || 0})`,
+      label: `${list.name || list.label || "Unknown List"} - Contacts: ${list.metaData?.size || 0}`,
       value: String(list.listId || list.id || ""),
     }));
 
