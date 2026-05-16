@@ -2653,11 +2653,11 @@ app.get("/hubspot-lists", async (req, res) => {
     //   return sendError(res, 500, "Failed to fetch HubSpot lists");
     // }
 
-    const rawText = await response.text();
+    // const rawText = await response.text();
 
-    console.log("RAW HUBSPOT RESPONSE:", rawText);
+    // console.log("RAW HUBSPOT RESPONSE:", rawText);
 
-    const data = rawText ? JSON.parse(rawText) : {};
+    // const data = rawText ? JSON.parse(rawText) : {};
 
     // if (data.results) {
     //   data.results.forEach((list) => {
@@ -2665,9 +2665,21 @@ app.get("/hubspot-lists", async (req, res) => {
     //   });
     // }
 
-    const allLists = data.results || data.lists || [];
+    // const allLists = data.results || data.lists || [];
 
-    const lists = allLists;
+    // const lists = allLists;
+
+    const data = await response.json();
+
+    console.log("FULL HUBSPOT LIST RESPONSE:", JSON.stringify(data, null, 2));
+
+    const lists = Array.isArray(data.lists)
+      ? data.lists
+      : Array.isArray(data.results)
+        ? data.results
+        : [];
+
+    console.log("LISTS:", lists);
 
     console.log("TOTAL LISTS FROM HUBSPOT:", lists.length);
 
@@ -2747,12 +2759,31 @@ app.get("/hubspot-lists", async (req, res) => {
 
     // console.log("FORMATTED:", formattedLists);
 
-    console.log("FULL LIST OBJECT:", JSON.stringify(allLists, null, 2));
+    // console.log("FULL LIST OBJECT:", JSON.stringify(allLists, null, 2));
+
+    console.log("FULL LIST OBJECT:", JSON.stringify(lists, null, 2));
+
+    // const formattedLists = lists.map((list) => ({
+    //   label: `${list.name || "Unknown List"} (${list.crmSearchSize || list.metaData?.size || 0})`,
+    //   value: String(list.listId || list.id || ""),
+    // }));
+
+    // const formattedLists = lists.map((list) => ({
+    //   label: `${list.name} (${list.processingStatus?.size || 0})`,
+    //   value: String(list.listId || list.listId || list.id),
+    // }));
 
     const formattedLists = lists.map((list) => ({
-      label: `${list.name || "Unknown List"} (${list.crmSearchSize || list.metaData?.size || 0})`,
+      label: `${list.name || "Unknown List"} (${
+        list.crmSearchSize || list.processingStatus?.size || 0
+      })`,
       value: String(list.listId || list.id || ""),
     }));
+
+    console.log(
+      "FORMATTED LISTS FINAL:",
+      JSON.stringify(formattedLists, null, 2),
+    );
 
     console.log("FORMATTED:", formattedLists);
 
