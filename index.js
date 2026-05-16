@@ -2615,64 +2615,43 @@ console.log("***** NEW SEARCH CODE RUNNING *****");
 
 app.get("/hubspot-lists", async (req, res) => {
   try {
-    console.log("===== HUBSPOT LIST API HIT =====");
-    console.log("REQ QUERY:", req.query);
-
     const portalId = req.query.portalId;
-
-    if (!portalId) {
-      return sendError(res, 400, "Portal ID missing");
-    }
-
-    console.log("PORTAL ID:", portalId);
 
     const accessToken = await getAccessToken(portalId);
 
-    console.log("Access token received");
-    console.log("Fetching HubSpot CRM lists...");
-
-    const response = await fetch(
-      "https://api.hubapi.com/crm/v3/lists?count=100",
-      {
-        method: "GET",
-        headers: {
-          Authorization: `Bearer ${accessToken}`,
-          "Content-Type": "application/json",
-        },
+    const response = await fetch("https://api.hubapi.com/crm/v3/lists/search", {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${accessToken}`,
+        "Content-Type": "application/json",
       },
-    );
+      body: JSON.stringify({
+        count: 100,
+        offset: 0,
+      }),
+    });
 
-    console.log("STATUS:", response.status);
-    console.log("STATUS TEXT:", response.statusText);
+    const data = await response.json();
 
-    const rawText = await response.text();
+    console.log("CRM SEARCH RESPONSE:", JSON.stringify(data, null, 2));
 
-    console.log("RAW RESPONSE:");
-    console.log(rawText);
-
-    const data = rawText ? JSON.parse(rawText) : {};
-
-    console.log("FULL PARSED RESPONSE:", JSON.stringify(data, null, 2));
-
-    const lists = data.results || [];
-
-    console.log("TOTAL LISTS:", lists.length);
+    const lists = data.results || data.lists || [];
 
     const formattedLists = lists.map((list) => ({
-      label: `${list.name || "Unknown List"} (${list.crmSearchSize || 0})`,
+      label: `${list.name || "Unknown"} (${list.crmSearchSize || 0})`,
 
       value: String(list.listId || list.id || ""),
 
       objectTypeId: list.objectTypeId || "",
     }));
 
-    console.log("FORMATTED LISTS:", JSON.stringify(formattedLists, null, 2));
+    console.log("FORMATTED:", JSON.stringify(formattedLists, null, 2));
 
     return sendSuccess(res, "Lists fetched successfully", {
       lists: formattedLists,
     });
   } catch (error) {
-    console.error("LIST FETCH ERROR:", error);
+    console.error(error);
 
     return sendError(res, 500, "Unable to fetch lists");
   }
