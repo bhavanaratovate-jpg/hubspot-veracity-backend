@@ -2616,17 +2616,23 @@ console.log("***** NEW SEARCH CODE RUNNING *****");
 app.get("/hubspot-lists", async (req, res) => {
   try {
     console.log("===== HUBSPOT LIST API HIT =====");
+    console.log("REQ QUERY:", req.query);
 
     const portalId = req.query.portalId;
+
+    if (!portalId) {
+      return sendError(res, 400, "Portal ID missing");
+    }
 
     console.log("PORTAL ID:", portalId);
 
     const accessToken = await getAccessToken(portalId);
 
-    console.log("Fetching HubSpot lists...");
+    console.log("Access token received");
+    console.log("Fetching HubSpot CRM lists...");
 
     const response = await fetch(
-      "https://api.hubapi.com/contacts/v1/lists?count=100",
+      "https://api.hubapi.com/crm/v3/lists?count=100",
       {
         method: "GET",
         headers: {
@@ -2637,26 +2643,27 @@ app.get("/hubspot-lists", async (req, res) => {
     );
 
     console.log("STATUS:", response.status);
+    console.log("STATUS TEXT:", response.statusText);
 
-    if (!response.ok) {
-      const errorText = await response.text();
+    const rawText = await response.text();
 
-      console.error("HUBSPOT ERROR:", errorText);
+    console.log("RAW RESPONSE:");
+    console.log(rawText);
 
-      return sendError(res, response.status, "Failed to fetch HubSpot lists");
-    }
+    const data = rawText ? JSON.parse(rawText) : {};
 
-    const data = await response.json();
+    console.log("FULL PARSED RESPONSE:", JSON.stringify(data, null, 2));
 
-    console.log("LEGACY RESPONSE:", JSON.stringify(data, null, 2));
-
-    const lists = Array.isArray(data.lists) ? data.lists : [];
+    const lists = data.results || [];
 
     console.log("TOTAL LISTS:", lists.length);
 
     const formattedLists = lists.map((list) => ({
-      label: `${list.name || "Unknown List"} (${list.metaData?.size || 0})`,
-      value: String(list.listId),
+      label: `${list.name || "Unknown List"} (${list.crmSearchSize || 0})`,
+
+      value: String(list.listId || list.id || ""),
+
+      objectTypeId: list.objectTypeId || "",
     }));
 
     console.log("FORMATTED LISTS:", JSON.stringify(formattedLists, null, 2));
@@ -2665,11 +2672,69 @@ app.get("/hubspot-lists", async (req, res) => {
       lists: formattedLists,
     });
   } catch (error) {
-    console.error("List fetch error:", error);
+    console.error("LIST FETCH ERROR:", error);
 
     return sendError(res, 500, "Unable to fetch lists");
   }
 });
+
+// app.get("/hubspot-lists", async (req, res) => {
+//   try {
+//     console.log("===== HUBSPOT LIST API HIT =====");
+
+//     const portalId = req.query.portalId;
+
+//     console.log("PORTAL ID:", portalId);
+
+//     const accessToken = await getAccessToken(portalId);
+
+//     console.log("Fetching HubSpot lists...");
+
+//     const response = await fetch(
+//       "https://api.hubapi.com/contacts/v1/lists?count=100",
+//       {
+//         method: "GET",
+//         headers: {
+//           Authorization: `Bearer ${accessToken}`,
+//           "Content-Type": "application/json",
+//         },
+//       },
+//     );
+
+//     console.log("STATUS:", response.status);
+
+//     if (!response.ok) {
+//       const errorText = await response.text();
+
+//       console.error("HUBSPOT ERROR:", errorText);
+
+//       return sendError(res, response.status, "Failed to fetch HubSpot lists");
+//     }
+
+//     const data = await response.json();
+
+//     console.log("LEGACY RESPONSE:", JSON.stringify(data, null, 2));
+
+//     const lists = Array.isArray(data.lists) ? data.lists : [];
+
+//     console.log("TOTAL LISTS:", lists.length);
+
+//     const formattedLists = lists.map((list) => ({
+//       label: `${list.name || "Unknown List"} (${list.metaData?.size || 0})`,
+//       value: String(list.listId),
+//     }));
+
+//     console.log("FORMATTED LISTS:", JSON.stringify(formattedLists, null, 2));
+
+//     return sendSuccess(res, "Lists fetched successfully", {
+//       lists: formattedLists,
+//     });
+//   } catch (error) {
+//     console.error("List fetch error:", error);
+
+//     return sendError(res, 500, "Unable to fetch lists");
+//   }
+// });
 
 app.get("/metrics", (req, res) => {
   res.json({
