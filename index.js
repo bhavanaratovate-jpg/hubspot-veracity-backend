@@ -2753,31 +2753,18 @@ app.get("/hubspot-lists", async (req, res) => {
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        objectTypeId: "0-1", // Contacts
+        offset: 0,
+        count: 100,
+        additionalProperties: ["hs_list_size_week_delta"],
       }),
     });
 
-    const rawText = await response.text();
+    const data = await response.json();
 
-    console.log("STATUS:", response.status);
+    console.log("SEARCH RESPONSE:", JSON.stringify(data, null, 2));
 
-    console.log("RAW HUBSPOT RESPONSE:", rawText.substring(0, 3000));
-
-    let data = {};
-
-    try {
-      data = rawText ? JSON.parse(rawText) : {};
-    } catch (e) {
-      console.log("JSON PARSE FAILED");
-
-      return sendError(res, 500, "HubSpot returned invalid response");
-    }
-
-    console.log("PARSED DATA:", JSON.stringify(data, null, 2));
-
-    const lists = data.results || [];
-
-    console.log("LISTS ARRAY:", JSON.stringify(lists, null, 2));
+    const lists = data.lists || [];
+    console.log("LISTS:", JSON.stringify(lists, null, 2));
 
     const formattedLists = lists.map((list) => ({
       label: `${list.name || "Unknown List"} (${
